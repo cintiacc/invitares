@@ -6,6 +6,8 @@ use Laravel\Fortify\Features;
 use App\Http\Controllers\GuestController;
 use App\Http\Controllers\GuestConfirmationController;
 use App\Http\Controllers\GiftController;
+use App\Http\Controllers\DashboardController;
+
 
 Route::get('/', function () {
     return redirect('/login'); 
@@ -25,9 +27,8 @@ Route::get('/confirmar-presenca/{guest}', [GuestConfirmationController::class, '
 
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('dashboard', function () {
-        return Inertia::render('dashboard');
-    })->name('dashboard');
+    Route::get('dashboard', [DashboardController::class, 'index'])
+        ->name('dashboard');
 
      Route::get('/guests', [GuestController::class, 'index'])->name('guests.index');
         Route::post('/guests', [GuestController::class, 'store'])->name('guests.store');
