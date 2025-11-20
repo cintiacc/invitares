@@ -30,9 +30,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', [DashboardController::class, 'index'])
         ->name('dashboard');
 
-     Route::get('/guests', [GuestController::class, 'index'])->name('guests.index');
-        Route::post('/guests', [GuestController::class, 'store'])->name('guests.store');
-        Route::delete('/guests/{id}', [GuestController::class, 'destroy'])->name('guests.destroy');
+    Route::get('/guests', [GuestController::class, 'index'])->name('guests.index');
+    Route::post('/guests', [GuestController::class, 'store'])->name('guests.store');
+    Route::delete('/guests/{id}', [GuestController::class, 'destroy'])->name('guests.destroy');
+
+    // Rotas de Gifts
+    Route::get('/gifts', [GiftController::class, 'index'])->name('gifts.index');
+    Route::post('/gifts', [GiftController::class, 'store'])->name('gifts.store');
+    Route::delete('/gifts/{id}', [GiftController::class, 'destroy'])->name('gifts.destroy');
 });
 
 require __DIR__.'/settings.php';
