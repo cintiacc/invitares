@@ -9,7 +9,10 @@ class GuestController extends Controller
 {
     public function index()
     {
-        return Guest::orderBy('name')->get();
+        return inertia('Dashboard', [
+            'guests' => Guest::all()
+        ]);
+
     }
 
     public function store(Request $request)

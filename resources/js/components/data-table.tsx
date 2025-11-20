@@ -28,7 +28,6 @@ export function DataTable<TData, TValue>({
   columns,
   data,
 }: DataTableProps<TData, TValue>) {
-
   const table = useReactTable({
     data,
     columns,
@@ -79,7 +78,6 @@ export function DataTable<TData, TValue>({
         </Table>
       </div>
 
-      {/* PAGINAÇÃO */}
       <div className="flex items-center justify-end gap-2">
         <Button
           variant="outline"

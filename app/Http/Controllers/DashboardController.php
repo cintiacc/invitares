@@ -2,16 +2,15 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use App\Models\Guest;
+use Inertia\Inertia;
 
 class DashboardController extends Controller
 {
     public function index()
     {
-        $guests = Guest::all(); // pega todos os convidados do banco
-
-        return Inertia::render('Dashboard', [
-            'guests' => $guests,
+        return Inertia::render('dashboard', [
+            'guests' => Guest::all()
         ]);
     }
 }
