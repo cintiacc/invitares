@@ -55,8 +55,11 @@ class GuestController extends Controller
 
     public function invite(Guest $guest)
     {
-        return view('invite', ['guest' => $guest]);
+        return inertia('invitation', [
+            'guest' => $guest,
+        ]);
     }
+
 
 }
 
