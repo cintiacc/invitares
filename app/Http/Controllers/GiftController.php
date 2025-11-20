@@ -43,31 +43,34 @@ class GiftController extends Controller
     public function store(Request $request)
     {
         try {
+            // Validação
             $data = $request->validate([
                 'name' => 'required|string|max:255',
-                'link' => 'required|url|max:255',
+                'link' => 'required|url|max:1000',
+                'image_link' => 'nullable|url|max:1000',
             ]);
 
             Gift::create($data);
 
-            // Alert no Laravel (Inertia recebe no props)
-            session()->flash('success', 'Presente adicionado com sucesso!');
+            // Sucesso
+            return redirect()->back()->with('success', 'Presente adicionado com sucesso!');
 
-            return redirect()->back();
-
-        } catch (Exception $e) {
-
-            Log::error('Erro ao cadastrar presente', [
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            // Retorna os erros de validação
+            return redirect()->back()->withErrors($e->errors());
+        } catch (\Exception $e) {
+            // Log do erro
+            \Log::error('Erro ao cadastrar presente', [
                 'request_data' => $request->all(),
                 'error' => $e->getMessage(),
                 'stack' => $e->getTraceAsString()
             ]);
 
-            session()->flash('error', 'Não foi possível adicionar o presente.');
-
-            return redirect()->back();
+            return redirect()->back()->with('error', 'Não foi possível adicionar o presente.');
         }
     }
+
+
 
     /**
      * Remove um presente

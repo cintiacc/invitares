@@ -147,18 +147,56 @@ export default function Dashboard() {
     },
   ];
 
+  //submit formulário para criar gifts
+
+  // Modal de Presente
+  type AlertType = {
+    type: "success" | "error";
+    message: string;
+  } | null;
+
+  const [giftAlert, setGiftAlert] = useState<AlertType>(null);
+
+  const {
+    data: giftData,
+    setData: setGiftData,
+    post: postGift,
+    processing: giftProcessing,
+    errors: giftErrors,
+    reset: resetGift
+  } = useForm({
+    name: '',
+    link: '',
+    image_link: '',
+  });
+
+
+  function handleGiftSubmit(e: React.FormEvent) {
+    e.preventDefault();
+
+    postGift('/gifts', {
+      onSuccess: () => {
+        resetGift();
+        setGiftAlert({ type: 'success', message: 'Presente cadastrado com sucesso!' });
+      },
+      onError: () => {
+        setGiftAlert({ type: 'error', message: 'Erro ao cadastrar presente. Verifique os campos.' });
+      },
+    });
+  }
+
+
   // ---------------------------
   // Submit do formulário (criar guest)
   // ---------------------------
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     post("/guests", {
       onSuccess: () => {
         reset();
         setAlert({ type: "success", message: "Convidado cadastrado com sucesso!" });
-        // opcional: recarregar para atualizar lista imediatamente
-        router.reload();
+        router.reload(); // atualiza tabela
       },
       onError: () => {
         setAlert({ type: "error", message: "Ocorreu um erro ao cadastrar o convidado." });
@@ -173,7 +211,7 @@ export default function Dashboard() {
       <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
         {/* TOPO - Botão + Modal */}
         <Dialog>
-          <div className="flex items-center justify-start mb-2">
+          <div className="flex items-center justify-end mb-2">
             <ButtonGroup>
               <DialogTrigger asChild>
                 <Button variant="secondary" className="cursor-pointer">
@@ -249,9 +287,99 @@ export default function Dashboard() {
         </Dialog>
 
         {/* TABELA DE GUESTS */}
-        <div className="rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border flex-1 overflow-auto">
+        <div className="rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border overflow-auto">
           <DataTable<Guest, any> columns={columns} data={guests ?? []} />
         </div>
+
+        {/* ADICIONAR PRESENTE */}
+        <Dialog>
+          <div className="flex items-center justify-end mb-2">
+            <ButtonGroup>
+              <DialogTrigger asChild>
+                <Button variant="secondary" className="cursor-pointer">
+                  Adicionar presente
+                </Button>
+              </DialogTrigger>
+
+              <ButtonGroupSeparator />
+
+              <DialogTrigger asChild>
+                <Button size="icon" variant="secondary">
+                  <IconPlus size={18} />
+                </Button>
+              </DialogTrigger>
+            </ButtonGroup>
+          </div>
+
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Cadastrar Presente</DialogTitle>
+              <DialogDescription>
+                Preencha os dados abaixo para adicionar um presente à lista.
+              </DialogDescription>
+            </DialogHeader>
+
+            {/* ALERTA */}
+            {giftAlert && (
+              <Alert
+                variant={giftAlert.type === "success" ? undefined : "destructive"}
+                className="mb-4"
+              >
+                {giftAlert.type === "success" ? (
+                  <CheckCircle2Icon />
+                ) : (
+                  <AlertCircleIcon />
+                )}
+                <AlertTitle>
+                  {giftAlert.type === "success" ? "Sucesso!" : "Erro!"}
+                </AlertTitle>
+                <AlertDescription>{giftAlert.message}</AlertDescription>
+              </Alert>
+            )}
+
+            {/* FORMULÁRIO */}
+            <form className="space-y-4" onSubmit={handleGiftSubmit}>
+              <Input
+                placeholder="Título do presente"
+                value={giftData.name}
+                onChange={(e) => setGiftData("name", e.target.value)}
+              />
+              {giftErrors.name && (
+                <p className="text-red-500 text-sm">{giftErrors.name}</p>
+              )}
+
+              <Input
+                placeholder="Link do produto"
+                value={giftData.link}
+                onChange={(e) => setGiftData("link", e.target.value)}
+              />
+              {giftErrors.link && (
+                <p className="text-red-500 text-sm">{giftErrors.link}</p>
+              )}
+
+              <Input
+                placeholder="URL da imagem (opcional)"
+                value={giftData.image_link}
+                onChange={(e) => setGiftData("image_link", e.target.value)}
+              />
+              {giftErrors.image_link && (
+                <p className="text-red-500 text-sm">{giftErrors.image_link}</p>
+              )}
+
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button variant="outline">Cancelar</Button>
+                </DialogClose>
+
+                <Button type="submit" disabled={giftProcessing}>
+                  Salvar presente
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+
       </div>
     </AppLayout>
   );
