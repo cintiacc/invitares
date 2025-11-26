@@ -18,7 +18,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
@@ -70,9 +69,7 @@ export default function Dashboard() {
 
   const [alert, setAlert] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
-  // ---------------------
   // ALERT DE AUTO-FECHAR
-  // ---------------------
   useEffect(() => {
     if (alert) {
       const t = setTimeout(() => setAlert(null), 4500);
@@ -80,9 +77,9 @@ export default function Dashboard() {
     }
   }, [alert]);
 
-  // --------------------------------
-  // FORM PARA CADASTRAR CONVIDADO
-  // --------------------------------
+  // -----------------------------
+  // FORM CONVIDADO
+  // -----------------------------
   const { data, setData, post, processing, errors, reset } = useForm({
     name: "",
     email: "",
@@ -104,9 +101,7 @@ export default function Dashboard() {
     });
   };
 
-  // --------------------------------
-  // CONFIRMAR EXCLUSÃO DE CONVIDADO
-  // --------------------------------
+  // Excluir convidado
   const [guestToDelete, setGuestToDelete] = useState<number | null>(null);
 
   const confirmDeleteGuest = () => {
@@ -124,9 +119,9 @@ export default function Dashboard() {
     });
   };
 
-  // ----------------------
-  // TABELA DE CONVIDADOS
-  // ----------------------
+  // -----------------------------
+  // COLUNAS TABELA DE CONVIDADOS
+  // -----------------------------
   const columns: ColumnDef<Guest>[] = [
     { accessorKey: "name", header: "Nome" },
     { accessorKey: "email", header: "E-mail" },
@@ -147,7 +142,7 @@ export default function Dashboard() {
     },
     {
       accessorKey: "confirmed_at",
-      header: "Data da confirmação",
+      header: "Data",
       cell: ({ row }) =>
         row.original.confirmed_at
           ? new Date(row.original.confirmed_at).toLocaleString()
@@ -168,13 +163,9 @@ export default function Dashboard() {
     },
   ];
 
-  // --------------------------------
-  // FORM PARA CADASTRAR PRESENTE
-  // --------------------------------
-  const [giftAlert, setGiftAlert] = useState<{ type: "success" | "error"; message: string } | null>(
-    null
-  );
-
+  // -----------------------------
+  // FORM PRESENTE + EDIÇÃO
+  // -----------------------------
   const {
     data: giftData,
     setData: setGiftData,
@@ -188,24 +179,48 @@ export default function Dashboard() {
     image_link: "",
   });
 
+  const [giftAlert, setGiftAlert] = useState<{ type: "success" | "error"; message: string } | null>(
+    null
+  );
+
+  const [selectedGift, setSelectedGift] = useState<Gift | null>(null);
+  const [openDialog, setOpenDialog] = useState(false);
+
+  const handleEditGift = (gift: Gift) => {
+    setSelectedGift(gift);
+
+    // Preenche o form
+    setGiftData({
+      name: gift.name,
+      link: gift.link,
+      image_link: gift.image_link ?? "",
+    });
+
+    setOpenDialog(true);
+  };
+
   const handleGiftSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    postGift("/gifts", {
-      onSuccess: () => {
-        resetGift();
-        setGiftAlert({ type: "success", message: "Presente cadastrado!" });
-        router.reload();
-      },
-      onError: () => {
-        setGiftAlert({ type: "error", message: "Erro ao cadastrar presente." });
-      },
-    });
+    if (selectedGift) {
+      router.put(`/gifts/${selectedGift.id}`, giftData, {
+        onSuccess: () => {
+          setSelectedGift(null);
+          setOpenDialog(false);
+          router.reload();
+        },
+      });
+    } else {
+      router.post("/gifts", giftData, {
+        onSuccess: () => {
+          setOpenDialog(false);
+          router.reload();
+        },
+      });
+    }
   };
 
-  // --------------------------------------
-  // CONFIRMAÇÃO DE EXCLUSÃO DE PRESENTE
-  // --------------------------------------
+  // Excluir presente
   const [giftToDelete, setGiftToDelete] = useState<number | null>(null);
 
   const confirmDeleteGift = () => {
@@ -223,9 +238,7 @@ export default function Dashboard() {
     });
   };
 
-  // -------------------
-  // TABELA DE PRESENTES
-  // -------------------
+  // Colunas tabela de presentes
   const giftColumns: ColumnDef<Gift>[] = [
     { accessorKey: "name", header: "Presente" },
     {
@@ -251,11 +264,7 @@ export default function Dashboard() {
       id: "actions",
       header: "Ações",
       cell: ({ row }) => (
-        <Button
-          variant="destructive"
-          size="sm"
-          onClick={() => setGiftToDelete(row.original.id)}
-        >
+        <Button variant="destructive" size="sm" onClick={() => setGiftToDelete(row.original.id)}>
           Excluir
         </Button>
       ),
@@ -267,8 +276,7 @@ export default function Dashboard() {
       <Head title="Dashboard" />
 
       <div className="flex flex-col gap-6 p-4">
-
-        {/* ----------------- ALERT ----------------- */}
+        {/* ALERTA GERAL */}
         {alert && (
           <Alert variant={alert.type === "error" ? "destructive" : "default"} className="mb-4">
             <AlertTitle>{alert.type === "error" ? "Erro" : "Sucesso"}</AlertTitle>
@@ -277,7 +285,7 @@ export default function Dashboard() {
         )}
 
         {/* ---------------------------------- */}
-        {/*      MODAL ADICIONAR CONVIDADO      */}
+        {/*    MODAL ADICIONAR CONVIDADO       */}
         {/* ---------------------------------- */}
         <Dialog>
           <div className="flex justify-end">
@@ -298,17 +306,6 @@ export default function Dashboard() {
             <DialogHeader>
               <DialogTitle>Cadastrar Convidado</DialogTitle>
             </DialogHeader>
-
-            {alert && (
-              <Alert
-                variant={alert.type === "success" ? undefined : "destructive"}
-                className="mb-4"
-              >
-                {alert.type === "success" ? <CheckCircle2Icon /> : <AlertCircleIcon />}
-                <AlertTitle>{alert.type === "success" ? "Sucesso!" : "Erro!"}</AlertTitle>
-                <AlertDescription>{alert.message}</AlertDescription>
-              </Alert>
-            )}
 
             <form className="space-y-4" onSubmit={handleSubmit}>
               <Input placeholder="Nome" value={data.name} onChange={(e) => setData("name", e.target.value)} />
@@ -340,9 +337,7 @@ export default function Dashboard() {
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Excluir convidado?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Esta ação é irreversível.
-              </AlertDialogDescription>
+              <AlertDialogDescription>Esta ação é irreversível.</AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel onClick={() => setGuestToDelete(null)}>Cancelar</AlertDialogCancel>
@@ -351,39 +346,16 @@ export default function Dashboard() {
           </AlertDialogContent>
         </AlertDialog>
 
-        {/* ---------------------------------------
-                  ADICIONAR PRESENTE
-        ---------------------------------------- */}
-        <Dialog>
-          <div className="flex justify-end">
-            <ButtonGroup>
-              <DialogTrigger asChild>
-                <Button variant="secondary">Adicionar presente</Button>
-              </DialogTrigger>
-              <ButtonGroupSeparator />
-              <DialogTrigger asChild>
-                <Button size="icon" variant="secondary">
-                  <IconPlus size={18} />
-                </Button>
-              </DialogTrigger>
-            </ButtonGroup>
-          </div>
-
+        {/* --------------------------------------- */}
+        {/*         DIALOG CADASTRAR PRESENTE       */}
+        {/* --------------------------------------- */}
+        <Dialog open={openDialog} onOpenChange={setOpenDialog}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Cadastrar Presente</DialogTitle>
+              <DialogTitle>
+                {selectedGift ? "Editar Presente" : "Cadastrar Presente"}
+              </DialogTitle>
             </DialogHeader>
-
-            {giftAlert && (
-              <Alert
-                variant={giftAlert.type === "success" ? undefined : "destructive"}
-                className="mb-4"
-              >
-                {giftAlert.type === "success" ? <CheckCircle2Icon /> : <AlertCircleIcon />}
-                <AlertTitle>{giftAlert.type === "success" ? "Sucesso!" : "Erro!"}</AlertTitle>
-                <AlertDescription>{giftAlert.message}</AlertDescription>
-              </Alert>
-            )}
 
             <form className="space-y-4" onSubmit={handleGiftSubmit}>
               <Input placeholder="Título do presente" value={giftData.name} onChange={(e) => setGiftData("name", e.target.value)} />
@@ -399,16 +371,36 @@ export default function Dashboard() {
                 <DialogClose asChild>
                   <Button variant="outline">Cancelar</Button>
                 </DialogClose>
-                <Button type="submit" disabled={giftProcessing}>Salvar presente</Button>
+                <Button type="submit" disabled={giftProcessing}>
+                  {selectedGift ? "Salvar alterações" : "Salvar presente"}
+                </Button>
               </DialogFooter>
             </form>
           </DialogContent>
         </Dialog>
 
+        {/* ------ BOTÃO ADD PRESENTE ------ */}
+        <div className="flex justify-end">
+          <ButtonGroup>
+            <Button variant="secondary" onClick={() => { resetGift(); setSelectedGift(null); setOpenDialog(true); }}>
+              Adicionar presente
+            </Button>
+            <ButtonGroupSeparator />
+            <Button size="icon" variant="secondary" onClick={() => { resetGift(); setSelectedGift(null); setOpenDialog(true); }}>
+              <IconPlus size={18} />
+            </Button>
+          </ButtonGroup>
+        </div>
+
         {/* --------------------- TABELA DE PRESENTES --------------------- */}
         <div className="rounded-xl border p-4 overflow-auto">
           <h2 className="text-lg font-semibold mb-3">Presentes cadastrados</h2>
-          <DataTable<Gift, any> columns={giftColumns} data={gifts ?? []} />
+
+          <DataTable
+            columns={giftColumns}
+            data={gifts ?? []}
+            onRowClick={handleEditGift}
+          />
         </div>
 
         {/* CONFIRMAR EXCLUSÃO DE PRESENTE */}
@@ -416,9 +408,7 @@ export default function Dashboard() {
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Excluir presente?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Esta ação não pode ser desfeita.
-              </AlertDialogDescription>
+              <AlertDialogDescription>Esta ação não pode ser desfeita.</AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel onClick={() => setGiftToDelete(null)}>Cancelar</AlertDialogCancel>
@@ -426,7 +416,6 @@ export default function Dashboard() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-
       </div>
     </AppLayout>
   );
