@@ -37,7 +37,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Rotas de Gifts
     Route::get('/gifts', [GiftController::class, 'index'])->name('gifts.index');
     Route::post('/gifts', [GiftController::class, 'store'])->name('gifts.store');
-    Route::delete('/gifts/{id}', [GiftController::class, 'destroy'])->name('gifts.destroy');
+    Route::delete('/gifts/{gift}', [GiftController::class, 'destroy'])
+        ->name('gifts.destroy');
+
 });
 
 require __DIR__.'/settings.php';
