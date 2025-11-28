@@ -60,6 +60,25 @@ class GuestController extends Controller
         ]);
     }
 
+    public function confirm(Request $request, Guest $guest)
+    {
+        try {
+            $guest->update([
+                'confirmed' => $request->boolean('confirmed'),
+                'confirmed_at' => now(),
+            ]);
+
+            return back()->with('success', 'Presença registrada!');
+        } catch (\Exception $e) {
+            Log::error('Erro ao confirmar presença', [
+                'guest_id' => $guest->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return back()->with('error', 'Erro ao registrar presença.');
+        }
+    }
+
 
 }
 

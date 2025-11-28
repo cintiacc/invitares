@@ -1,17 +1,50 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { usePage } from "@inertiajs/react";
 
 import InstagramGallery from "../components/instagram-gallery";
 import CountdownComponent from "../components/coutdown-component";
+
 import { MdMail } from "react-icons/md";
 import { BsGift } from "react-icons/bs";
 
-export default function WeddingPage() {
+
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+
+// =============================
+// TIPAGEM DO CONVIDADO
+// =============================
+type Guest = {
+  id: number;
+  name: string;
+  confirmed: boolean;
+  confirmed_at: string | null;
+};
+
+// =============================
+// COMPONENTE
+// =============================
+export default function Invitation() {
   const historiaRef = useRef<HTMLElement | null>(null);
   const noivosRef = useRef<HTMLElement | null>(null);
 
+  // Guest vindo do Laravel via Inertia
+  const { props } = usePage<{ guest: Guest }>();
+  const guest = props.guest;
 
-  // Função de revelar (IntersectionObserver)
-  const reveal = (el: HTMLElement | null) => {
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  // =============================
+  // Função REVEAL com tipagem
+  // =============================
+  const reveal = (el: HTMLElement | null): void => {
     if (!el) return;
 
     const observer = new IntersectionObserver(
@@ -28,25 +61,43 @@ export default function WeddingPage() {
     observer.observe(el);
   };
 
-  // Extrair query param ?id=...
-  const params = new URLSearchParams(location.search);
-  const id = params.get("id");
-
-  const confirmar = () => {
-    if (!id) {
-      alert("ID do convidado não encontrado");
-      return;
-    }
-  };
-
   useEffect(() => {
     reveal(historiaRef.current);
     reveal(noivosRef.current);
   }, []);
 
+  // =============================
+  // Registrar confirmação
+  // =============================
+  const registrarPresenca = async (confirmed: boolean): Promise<void> => {
+    if (!guest?.id) {
+      alert("ID do convidado não encontrado.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      await fetch(`/confirmar-presenca/${guest.id}?confirmed=${confirmed}`, {
+        method: "GET",
+      });
+
+      alert("Presença registrada!");
+      setDialogOpen(false);
+
+    } catch (error) {
+      alert("Erro ao registrar presença!");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // =============================
+  // RETORNO DO COMPONENTE
+  // =============================
   return (
     <>
-      {/* HERO */}
+      {/* -------------------- HERO -------------------- */}
       <section className="relative w-full min-h-screen flex items-center justify-center text-white overflow-hidden">
         <div className="absolute inset-0">
           <img
@@ -75,7 +126,6 @@ export default function WeddingPage() {
               stroke="currentColor"
               strokeWidth="2"
               viewBox="0 0 24 24"
-              aria-hidden="true"
             >
               <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"></path>
             </svg>
@@ -83,114 +133,99 @@ export default function WeddingPage() {
         </div>
       </section>
 
-      {/* NOSSA HISTÓRIA */}
+      {/* -------------------- NOSSA HISTÓRIA -------------------- */}
       <section
         ref={historiaRef}
-        className="mx-auto px-6 py-20 bg-[#eddfd4] opacity-0 translate-y-10 transition-opacity transition-transform duration-700"
+        className="mx-auto px-6 py-20 bg-[#eddfd4] opacity-0 translate-y-10 transition-opacity duration-700"
       >
         <h3 className="text-3xl font-playfair mb-6 text-center">Nossa História</h3>
 
         <p className="text-gray-700 leading-relaxed text-center max-w-3xl mx-auto">
-          Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt...
+          Lorem ipsum dolor sit amet, consectetur adipiscing elit...
         </p>
       </section>
 
-      {/* OS NOIVOS */}
+      {/* -------------------- OS NOIVOS -------------------- */}
       <section
         ref={noivosRef}
-        className="relative max-w-5xl mx-auto px-6 py-20 opacity-0 translate-y-10 transition-opacity transition-transform duration-700"
+        className="max-w-5xl mx-auto px-6 py-20 opacity-0 translate-y-10 transition-opacity duration-700"
       >
         <h3 className="text-3xl font-playfair mb-16 text-center">Os Noivos</h3>
 
-        <div className="relative flex justify-center items-start space-y-32">
-          {/* Noiva */}
-          <div className="relative z-20 text-center">
-            <img
-              src="/images/couple1.jpg"
-              alt="Noiva"
-              className="w-72 h-auto rounded-lg shadow-lg mx-auto"
-            />
+        <div className="flex justify-center items-start space-y-32 relative">
+          <div className="text-center z-20">
+            <img src="/images/couple1.jpg" className="w-72 rounded-lg shadow-lg mx-auto" />
             <h4 className="text-xl font-semibold mt-4">Gabrielle</h4>
             <p className="text-sm text-gray-500">A Noiva</p>
           </div>
 
-          {/* Noivo */}
-          <div className="relative z-10 text-center md:-ml-16">
-            <img
-              src="/images/couple2.jpg"
-              alt="Noivo"
-              className="w-72 h-auto rounded-lg shadow-lg mx-auto"
-            />
+          <div className="text-center z-10 md:-ml-16">
+            <img src="/images/couple2.jpg" className="w-72 rounded-lg shadow-lg mx-auto" />
             <h4 className="text-xl font-semibold mt-4">Jonas</h4>
             <p className="text-sm text-gray-500">O Noivo</p>
           </div>
         </div>
       </section>
 
-      {/* NOSSO CASAMENTO */}
-      <section id="nosso-casamento" className="max-w-5xl mx-auto px-6 py-20 text-center">
-        <h3 className="text-3xl font-playfair mb-16">Nosso Casamento</h3>
-
-        <div className="flex md:flex-row md:divide-y-0 md:divide-x divide-gray-300">
-          <div className="md:w-1/2 px-6 py-4">
-            <h4 className="text-xl font-semibold mb-2 flex items-center justify-center gap-1">
-              <span className="material-symbols-outlined">event</span>
-              Quando
-            </h4>
-            <p className="text-gray-600">
-              Sábado, XX de XXX de XXXX <br />
-              Às 16h00
-            </p>
-          </div>
-
-          <div className="md:w-1/2 px-6 py-4">
-            <h4 className="text-xl font-semibold mb-2 flex items-center justify-center gap-1">
-              <span className="material-symbols-outlined">location_on</span>
-              Onde
-            </h4>
-            <p className="text-gray-600">
-              Espaço Jardim do Sol <br />
-              Rua das Flores, 123 - Porto Alegre, RS
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* PRESENTES */}
+      {/* -------------------- PRESENTES -------------------- */}
       <section className="bg-[#eddfd4] py-20 px-6 text-center">
         <h3 className="text-3xl font-playfair mb-10">Quer nos presentear?</h3>
-        <div className="flex justify-center items-center">
-            <BsGift size={24} />
-        </div>
-        <p className="mb-6 text-gray-700">
-          Veja nossa lista de presentes e contribua com o que desejar.
-        </p>
 
+        <div className="flex justify-center"><BsGift size={24} /></div>
+
+        <p className="mb-6 text-gray-700">
+          Veja nossa lista de presentes e contribua como desejar.
+        </p>
       </section>
 
-      {/* INSTAGRAM */}
+      {/* -------------------- INSTAGRAM -------------------- */}
       <section className="py-20 text-center">
         <InstagramGallery />
       </section>
 
-      {/* CONFIRMAÇÃO */}
+      {/* -------------------- CONFIRMAÇÃO -------------------- */}
       <section className="bg-[#eddfd4] py-20 px-6 text-center">
         <h3 className="text-3xl font-playfair mb-10">Confirmação de Presença</h3>
 
-        <div className="bg-[#fffaf0] max-w-md mx-auto border border-gray-300 rounded-xl shadow-lg p-10">
-         <div className="flex justify-center items-center">
-            <MdMail size={24} />
-         </div>
+        <div className="bg-[#fffaf0] max-w-md mx-auto border rounded-xl shadow-lg p-10">
+          <div className="flex justify-center"><MdMail size={24} /></div>
+
           <p className="mb-6 text-gray-700">
             Por favor, confirme sua presença até 01/09/2025
           </p>
+
+          <Button onClick={() => setDialogOpen(true)}>
+            Confirmar presença
+          </Button>
         </div>
       </section>
 
-      {/* COUNTDOWN */}
+      {/* -------------------- COUNTDOWN -------------------- */}
       <section>
         <CountdownComponent />
       </section>
+
+      {/* -------------------- DIALOG -------------------- */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Confirmar presença</DialogTitle>
+          </DialogHeader>
+
+          <p className="text-gray-700 mb-6 text-left">
+            Você confirma presença no casamento?
+          </p>
+
+          <DialogFooter className="flex justify-between">
+            <Button
+              disabled={loading}
+              onClick={() => registrarPresenca(true)}
+            >
+              Confirmar presença
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

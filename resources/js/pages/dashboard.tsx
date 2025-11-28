@@ -12,6 +12,9 @@ import AppLayout from "@/layouts/app-layout";
 import { dashboard } from "@/routes";
 import type { BreadcrumbItem } from "@/types";
 
+import { FaRegCopy } from "react-icons/fa";
+
+
 import {
   Dialog,
   DialogTrigger,
@@ -129,12 +132,37 @@ export default function Dashboard() {
     {
       accessorKey: "invite_link",
       header: "Convite",
-      cell: ({ row }) => (
-        <a className="text-blue-600 underline" href={row.original.invite_link} target="_blank">
-          Abrir convite
-        </a>
-      ),
+      cell: ({ row }) => {
+        const link = row.original.invite_link;
+
+        const copyToClipboard = async () => {
+          try {
+            await navigator.clipboard.writeText(link);
+            setAlert({ type: "success", message: "Link copiado para a área de transferência" });
+          } catch (error) {
+            console.error("Erro ao copiar o link:", error);
+            setAlert({ type: "error", message: "Erro ao copiar o link." });
+          }
+        };
+
+        return (
+          <div className="flex items-center gap-3">
+            {/* Abrir convite */}
+            <a
+              className="text-blue-600 underline"
+              href={link}
+              target="_blank"
+            >
+              Abrir convite
+            </a>
+
+            {/* Botão de copiar */}
+            <FaRegCopy size={14} onClick={copyToClipboard} />
+          </div>
+        );
+      },
     },
+
     {
       accessorKey: "confirmed",
       header: "Confirmado",
