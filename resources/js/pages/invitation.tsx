@@ -1,12 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { usePage } from "@inertiajs/react";
-
-import InstagramGallery from "../components/instagram-gallery";
-import CountdownComponent from "../components/coutdown-component";
-
-import { MdMail } from "react-icons/md";
-import { BsGift } from "react-icons/bs";
-
 
 import {
   Dialog,
@@ -17,9 +10,6 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
-// =============================
-// TIPAGEM DO CONVIDADO
-// =============================
 type Guest = {
   id: number;
   name: string;
@@ -27,51 +17,16 @@ type Guest = {
   confirmed_at: string | null;
 };
 
-// =============================
-// COMPONENTE
-// =============================
 export default function Invitation() {
-  const historiaRef = useRef<HTMLElement | null>(null);
-  const noivosRef = useRef<HTMLElement | null>(null);
-
-  // Guest vindo do Laravel via Inertia
   const { props } = usePage<{ guest: Guest }>();
   const guest = props.guest;
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // =============================
-  // Função REVEAL com tipagem
-  // =============================
-  const reveal = (el: HTMLElement | null): void => {
-    if (!el) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          el.classList.remove("opacity-0", "translate-y-10");
-          el.classList.add("opacity-100", "translate-y-0");
-          observer.unobserve(el);
-        }
-      },
-      { threshold: 0.2 }
-    );
-
-    observer.observe(el);
-  };
-
-  useEffect(() => {
-    reveal(historiaRef.current);
-    reveal(noivosRef.current);
-  }, []);
-
-  // =============================
-  // Registrar confirmação
-  // =============================
   const registrarPresenca = async (confirmed: boolean): Promise<void> => {
     if (!guest?.id) {
-      alert("ID do convidado não encontrado.");
+      alert("ID do convidado nao encontrado.");
       return;
     }
 
@@ -82,146 +37,92 @@ export default function Invitation() {
         method: "GET",
       });
 
-      alert("Presença registrada!");
+      alert("Presenca registrada!");
       setDialogOpen(false);
-
     } catch (error) {
-      alert("Erro ao registrar presença!");
+      alert("Erro ao registrar presenca!");
     } finally {
       setLoading(false);
     }
   };
 
-  // =============================
-  // RETORNO DO COMPONENTE
-  // =============================
   return (
     <>
-      {/* -------------------- HERO -------------------- */}
-      <section className="relative w-full min-h-screen flex items-center justify-center text-white overflow-hidden">
+      <section className="relative min-h-[100dvh] overflow-hidden bg-[#7a159e] text-white">
         <div className="absolute inset-0">
-          <img
-            src="/images/hero-section.jpg"
-            alt="Fundo"
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-black opacity-60"></div>
+          <div className="absolute -top-24 right-[-4rem] h-72 w-72 rounded-full bg-[#b357ff] opacity-70 blur-2xl" />
+          <div className="absolute top-40 left-[-6rem] h-64 w-64 rounded-full bg-[#ff8be3] opacity-50 blur-3xl" />
+          <div className="absolute -bottom-32 left-1/3 h-80 w-80 rounded-full bg-[#9b46e4] opacity-60 blur-3xl" />
         </div>
 
-        <div className="relative z-10 text-center px-4">
-          <h2 className="text-4xl md:text-6xl">
-            Convite<br /> de Casamento
-          </h2>
+        <div className="relative mx-auto flex min-h-[100dvh] w-full max-w-2xl flex-col px-6 pb-14 pt-10">
+          <header className="flex items-center justify-between">
+            <button className="flex h-11 w-11 items-center justify-center rounded-full bg-white/10 ring-1 ring-white/20">
+              <span className="text-xl">&larr;</span>
+            </button>
+            <span className="rounded-full bg-white/15 px-4 py-2 text-xs font-medium uppercase tracking-[0.2em]">
+              Convite
+            </span>
+          </header>
 
-          <br />
+          <div className="mt-12 flex flex-1 flex-col items-center text-center">
+            <div className="mb-8 w-full rounded-[36px] bg-white/10 p-5 shadow-xl ring-1 ring-white/15">
+              <div className="rounded-[28px] bg-white/5 p-4">
+                <div className="aspect-[4/3] w-full overflow-hidden rounded-[24px] border border-white/20 bg-white/10">
+                  <div className="flex h-full items-center justify-center text-sm text-white/70">
+                    Imagem do convite
+                  </div>
+                </div>
+              </div>
+            </div>
 
-          <p className="text-lg md:text-xl mb-6">
-            Gabrielle e Jonas
-          </p>
+            <h1 className="text-3xl font-semibold md:text-4xl">
+              Festa do convite
+            </h1>
+            <p className="mt-3 text-sm text-white/70 md:text-base">
+              Domingo, 25 de janeiro as 19:00
+            </p>
 
-          <div className="flex justify-center mt-8">
-            <svg
-              className="w-8 h-8 text-white animate-bounce"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"></path>
-            </svg>
+            <div className="mt-8 w-full rounded-full bg-white/10 p-2 shadow-lg ring-1 ring-white/10">
+              <div className="flex items-center justify-between text-sm font-medium">
+                <Button
+                  type="button"
+                  className="flex-1 rounded-full bg-white text-[#7a159e] hover:bg-white/90"
+                  onClick={() => setDialogOpen(true)}
+                >
+                  Aceitar convite
+                </Button>
+                <span className="mx-3 h-8 w-px bg-white/20" />
+                <button className="flex-1 rounded-full px-4 py-2 text-white/80">
+                  Talvez
+                </button>
+                <span className="mx-3 h-8 w-px bg-white/20" />
+                <button className="flex-1 rounded-full px-4 py-2 text-white/80">
+                  Nao vou
+                </button>
+              </div>
+            </div>
+
+            <p className="mt-6 max-w-sm text-xs text-white/60">
+              Confirme sua presenca para receber atualizacoes e detalhes do evento.
+            </p>
           </div>
         </div>
       </section>
 
-      {/* -------------------- NOSSA HISTÓRIA -------------------- */}
-      <section
-        ref={historiaRef}
-        className="mx-auto px-6 py-20 bg-[#eddfd4] opacity-0 translate-y-10 transition-opacity duration-700"
-      >
-        <h3 className="text-3xl font-playfair mb-6 text-center">Nossa História</h3>
-
-        <p className="text-gray-700 leading-relaxed text-center max-w-3xl mx-auto">
-          Lorem ipsum dolor sit amet, consectetur adipiscing elit...
-        </p>
-      </section>
-
-      {/* -------------------- OS NOIVOS -------------------- */}
-      <section
-        ref={noivosRef}
-        className="max-w-5xl mx-auto px-6 py-20 opacity-0 translate-y-10 transition-opacity duration-700"
-      >
-        <h3 className="text-3xl font-playfair mb-16 text-center">Os Noivos</h3>
-
-        <div className="flex justify-center items-start space-y-32 relative">
-          <div className="text-center z-20">
-            <img src="/images/couple1.jpg" className="w-72 rounded-lg shadow-lg mx-auto" />
-            <h4 className="text-xl font-semibold mt-4">Gabrielle</h4>
-            <p className="text-sm text-gray-500">A Noiva</p>
-          </div>
-
-          <div className="text-center z-10 md:-ml-16">
-            <img src="/images/couple2.jpg" className="w-72 rounded-lg shadow-lg mx-auto" />
-            <h4 className="text-xl font-semibold mt-4">Jonas</h4>
-            <p className="text-sm text-gray-500">O Noivo</p>
-          </div>
-        </div>
-      </section>
-
-      {/* -------------------- PRESENTES -------------------- */}
-      <section className="bg-[#eddfd4] py-20 px-6 text-center">
-        <h3 className="text-3xl font-playfair mb-10">Quer nos presentear?</h3>
-
-        <div className="flex justify-center"><BsGift size={24} /></div>
-
-        <p className="mb-6 text-gray-700">
-          Veja nossa lista de presentes e contribua como desejar.
-        </p>
-      </section>
-
-      {/* -------------------- INSTAGRAM -------------------- */}
-      <section className="py-20 text-center">
-        <InstagramGallery />
-      </section>
-
-      {/* -------------------- CONFIRMAÇÃO -------------------- */}
-      <section className="bg-[#eddfd4] py-20 px-6 text-center">
-        <h3 className="text-3xl font-playfair mb-10">Confirmação de Presença</h3>
-
-        <div className="bg-[#fffaf0] max-w-md mx-auto border rounded-xl shadow-lg p-10">
-          <div className="flex justify-center"><MdMail size={24} /></div>
-
-          <p className="mb-6 text-gray-700">
-            Por favor, confirme sua presença até 01/09/2025
-          </p>
-
-          <Button onClick={() => setDialogOpen(true)}>
-            Confirmar presença
-          </Button>
-        </div>
-      </section>
-
-      {/* -------------------- COUNTDOWN -------------------- */}
-      <section>
-        <CountdownComponent />
-      </section>
-
-      {/* -------------------- DIALOG -------------------- */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Confirmar presença</DialogTitle>
+            <DialogTitle>Confirmar presenca</DialogTitle>
           </DialogHeader>
 
-          <p className="text-gray-700 mb-6 text-left">
-            Você confirma presença no casamento?
+          <p className="mb-6 text-left text-gray-700">
+            Voce confirma presenca neste convite?
           </p>
 
           <DialogFooter className="flex justify-between">
-            <Button
-              disabled={loading}
-              onClick={() => registrarPresenca(true)}
-            >
-              Confirmar presença
+            <Button disabled={loading} onClick={() => registrarPresenca(true)}>
+              Confirmar presenca
             </Button>
           </DialogFooter>
         </DialogContent>
