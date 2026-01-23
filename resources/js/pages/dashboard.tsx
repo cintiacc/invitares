@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { usePage, useForm, router, Head } from "@inertiajs/react";
-import type { PageProps } from "@inertiajs/core";
+import { usePage, useForm, router, Head, Link } from "@inertiajs/react";
 
 import { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/data-table";
@@ -17,7 +16,6 @@ import { FaRegCopy } from "react-icons/fa";
 
 import {
   Dialog,
-  DialogTrigger,
   DialogContent,
   DialogHeader,
   DialogTitle,
@@ -26,11 +24,7 @@ import {
 } from "@/components/ui/dialog";
 
 import { Input } from "@/components/ui/input";
-import { ButtonGroup, ButtonGroupSeparator } from "@/components/ui/button-group";
-import { IconPlus } from "@tabler/icons-react";
-
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { AlertCircleIcon, CheckCircle2Icon } from "lucide-react";
 
 import {
   AlertDialog,
@@ -64,11 +58,23 @@ type Gift = {
   image_link: string | null;
 };
 
+type Invitation = {
+  id: number;
+  type: string;
+  title: string;
+  event_date: string | null;
+  event_time: string | null;
+};
+
 export default function Dashboard() {
-  const { guests = [], gifts = [] } = usePage().props as {
+  const { invitations = [], guests = [], gifts = [] } = usePage().props as {
+    invitations?: Invitation[];
     guests?: Guest[];
     gifts?: Gift[];
   };
+  const hasGuests = guests.length > 0;
+  const hasGifts = gifts.length > 0;
+  const hasInvites = invitations.length > 0;
 
   const [alert, setAlert] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
@@ -316,20 +322,6 @@ export default function Dashboard() {
         {/*    MODAL ADICIONAR CONVIDADO       */}
         {/* ---------------------------------- */}
         <Dialog>
-          <div className="flex justify-end">
-            <ButtonGroup>
-              <DialogTrigger asChild>
-                <Button variant="secondary">Adicionar convidado</Button>
-              </DialogTrigger>
-              <ButtonGroupSeparator />
-              <DialogTrigger asChild>
-                <Button size="icon" variant="secondary">
-                  <IconPlus size={18} />
-                </Button>
-              </DialogTrigger>
-            </ButtonGroup>
-          </div>
-
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Cadastrar Convidado</DialogTitle>
@@ -355,10 +347,82 @@ export default function Dashboard() {
           </DialogContent>
         </Dialog>
 
+        {!hasInvites && (
+          <div className="relative flex min-h-[calc(100vh-12rem)] items-center justify-center overflow-hidden rounded-3xl border bg-gradient-to-b from-[#f7f2ea] via-[#e7f0f6] to-[#f6dcc9] p-8 text-center text-[#2a2622] shadow-sm">
+            <div className="pointer-events-none absolute -top-24 right-10 h-48 w-48 rounded-full bg-[#fff6ec] blur-3xl" />
+            <div className="pointer-events-none absolute -bottom-20 left-6 h-40 w-40 rounded-full bg-[#cfe8f7] blur-3xl" />
+
+            <div className="mx-auto flex max-w-md flex-col items-center gap-3">
+              <div className="rounded-2xl bg-white/70 p-4 shadow-sm">
+                <svg
+                  width="36"
+                  height="36"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="text-[#2a2622]"
+                >
+                  <path
+                    d="M7 4h10a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                  />
+                  <path
+                    d="M8 9h8M8 12h8M8 15h5"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </div>
+              <h2 className="text-xl font-semibold">Nenhum convite criado</h2>
+              <p className="text-sm text-[#5a524a]">
+                Convites criados por voce aparecerao aqui com convidados confirmados e presentes.
+              </p>
+              <Button asChild className="mt-3 w-full rounded-full bg-[#2a2622] text-white hover:bg-[#201d1a] md:w-auto">
+                <Link href="/convites/novo">Criar convite</Link>
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {hasInvites && (
+          <div className="rounded-2xl border bg-background p-6 shadow-sm">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Seus convites</h2>
+              <Button asChild variant="secondary">
+                <Link href="/convites/novo">Novo convite</Link>
+              </Button>
+            </div>
+            <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {invitations.map((invitation) => (
+                <Link
+                  key={invitation.id}
+                  href={`/convites/${invitation.id}/preview`}
+                  className="rounded-2xl border bg-white p-4 transition hover:-translate-y-1 hover:shadow-md"
+                >
+                  <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                    {invitation.type}
+                  </p>
+                  <p className="mt-2 text-lg font-semibold">{invitation.title}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {invitation.event_date
+                      ? new Date(invitation.event_date).toLocaleDateString()
+                      : "Sem data"}
+                    {invitation.event_time ? ` • ${invitation.event_time}` : ""}
+                  </p>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* --------------------- TABELA DE CONVIDADOS --------------------- */}
-        <div className="rounded-xl border p-4 overflow-auto">
-          <DataTable<Guest, any> columns={columns} data={guests ?? []} />
-        </div>
+        {hasGuests && (
+          <div className="rounded-xl border p-4 overflow-auto">
+            <DataTable<Guest, any> columns={columns} data={guests ?? []} />
+          </div>
+        )}
 
         {/* CONFIRMAR EXCLUSÃO DE CONVIDADO */}
         <AlertDialog open={guestToDelete !== null}>
@@ -407,29 +471,18 @@ export default function Dashboard() {
           </DialogContent>
         </Dialog>
 
-        {/* ------ BOTÃO ADD PRESENTE ------ */}
-        <div className="flex justify-end">
-          <ButtonGroup>
-            <Button variant="secondary" onClick={() => { resetGift(); setSelectedGift(null); setOpenDialog(true); }}>
-              Adicionar presente
-            </Button>
-            <ButtonGroupSeparator />
-            <Button size="icon" variant="secondary" onClick={() => { resetGift(); setSelectedGift(null); setOpenDialog(true); }}>
-              <IconPlus size={18} />
-            </Button>
-          </ButtonGroup>
-        </div>
-
         {/* --------------------- TABELA DE PRESENTES --------------------- */}
-        <div className="rounded-xl border p-4 overflow-auto">
-          <h2 className="text-lg font-semibold mb-3">Presentes cadastrados</h2>
+        {hasGifts && (
+          <div className="rounded-xl border p-4 overflow-auto">
+            <h2 className="text-lg font-semibold mb-3">Presentes cadastrados</h2>
 
-          <DataTable
-            columns={giftColumns}
-            data={gifts ?? []}
-            onRowClick={handleEditGift}
-          />
-        </div>
+            <DataTable
+              columns={giftColumns}
+              data={gifts ?? []}
+              onRowClick={handleEditGift}
+            />
+          </div>
+        )}
 
         {/* CONFIRMAR EXCLUSÃO DE PRESENTE */}
         <AlertDialog open={giftToDelete !== null}>
