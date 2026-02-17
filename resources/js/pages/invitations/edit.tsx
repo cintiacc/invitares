@@ -1,16 +1,12 @@
+
 import { useEffect, useState } from 'react';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
 
 import AppLayout from '@/layouts/app-layout';
 import type { BreadcrumbItem } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { dashboard } from '@/routes';
-
-const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Dashboard', href: dashboard().url },
-    { title: 'Editar convite', href: '/convites/editar' },
-];
 
 type Invitation = {
     id: number;
@@ -28,10 +24,46 @@ type Invitation = {
     gift_link: string | null;
     map_link: string | null;
     playlist_link: string | null;
+    theme_color: string | null;
+    font_color: string | null;
 };
 
-export default function EditInvitation({ invitation }: { invitation: Invitation }) {
-    const { data, setData, put, processing, errors } = useForm({
+type Guest = {
+    id: number;
+    name: string;
+    email: string;
+    phone: string | null;
+    invite_link: string | null;
+    confirmed: boolean;
+    confirmed_at: string | null;
+};
+
+type Gift = {
+    id: number;
+    name: string;
+    link: string;
+    image_link: string | null;
+};
+
+type EditInvitationProps = {
+    invitation: Invitation;
+    guests: Guest[];
+    gifts: Gift[];
+};
+
+export default function EditInvitation({ invitation, guests, gifts }: EditInvitationProps) {
+    const [activeTab, setActiveTab] = useState<'informacoes' | 'convidados' | 'presentes'>(
+        'informacoes'
+    );
+    const breadcrumbs: BreadcrumbItem[] = [
+        { title: 'Dashboard', href: dashboard().url },
+        { title: 'Editar convite', href: `/convites/${invitation.id}/editar` },
+        ...(activeTab === 'convidados'
+            ? [{ title: 'Convidados', href: `/convites/${invitation.id}/editar` }]
+            : []),
+    ];
+
+    const { data, setData, post, processing, errors } = useForm({
         type: invitation.type ?? 'aniversario',
         title: invitation.title ?? '',
         subtitle: invitation.subtitle ?? '',
@@ -44,12 +76,52 @@ export default function EditInvitation({ invitation }: { invitation: Invitation 
         gift_link: invitation.gift_link ?? '',
         map_link: invitation.map_link ?? '',
         playlist_link: invitation.playlist_link ?? '',
+        theme_color: invitation.theme_color ?? '#7a159e',
+        font_color: invitation.font_color ?? '#ffffff',
         cover_image: null as File | null,
         gallery_images: [] as File[],
+        _method: 'put',
     });
     const [coverPreview, setCoverPreview] = useState<string | null>(null);
     const [galleryPreviews, setGalleryPreviews] = useState<string[]>([]);
+    const [submitError, setSubmitError] = useState<string | null>(null);
 
+    const {
+        data: guestData,
+        setData: setGuestData,
+        post: postGuest,
+        processing: guestProcessing,
+        errors: guestErrors,
+        reset: resetGuest,
+    } = useForm({
+        name: '',
+        email: '',
+        phone: '',
+    });
+
+    const {
+        data: guestImportData,
+        setData: setGuestImportData,
+        post: postGuestImport,
+        processing: guestImporting,
+        errors: guestImportErrors,
+        reset: resetGuestImport,
+    } = useForm({
+        file: null as File | null,
+    });
+
+    const {
+        data: giftData,
+        setData: setGiftData,
+        post: postGift,
+        processing: giftProcessing,
+        errors: giftErrors,
+        reset: resetGift,
+    } = useForm({
+        name: '',
+        link: '',
+        image_link: '',
+    });
     useEffect(() => {
         if (invitation.cover_image) {
             setCoverPreview(`/storage/${invitation.cover_image}`);
@@ -86,215 +158,606 @@ export default function EditInvitation({ invitation }: { invitation: Invitation 
 
     const handleSubmit = (event: React.FormEvent) => {
         event.preventDefault();
-        put(`/convites/${invitation.id}`, { forceFormData: true });
+        setSubmitError(null);
+        post(`/convites/${invitation.id}`, {
+            forceFormData: true,
+            onError: () => {
+                setSubmitError(
+                    'Nao foi possivel salvar. Verifique os campos obrigatorios e tente novamente.'
+                );
+            },
+        });
+    };
+
+    const handleGuestSubmit = (event: React.FormEvent) => {
+        event.preventDefault();
+        postGuest(`/convites/${invitation.id}/guests`, {
+            onSuccess: () => {
+                resetGuest();
+                router.reload({ only: ['guests'] });
+            },
+        });
+    };
+
+    const handleGuestImport = (event: React.FormEvent) => {
+        event.preventDefault();
+        postGuestImport(`/convites/${invitation.id}/guests/import`, {
+            forceFormData: true,
+            onSuccess: () => {
+                resetGuestImport();
+                router.reload({ only: ['guests'] });
+            },
+        });
+    };
+
+    const handleGuestDelete = (guestId: number) => {
+        router.delete(`/convites/${invitation.id}/guests/${guestId}`, {
+            onSuccess: () => {
+                router.reload({ only: ['guests'] });
+            },
+        });
+    };
+
+    const handleGiftSubmit = (event: React.FormEvent) => {
+        event.preventDefault();
+        postGift(`/convites/${invitation.id}/gifts`, {
+            onSuccess: () => {
+                resetGift();
+                router.reload({ only: ['gifts'] });
+            },
+        });
+    };
+
+    const handleGiftDelete = (giftId: number) => {
+        router.delete(`/convites/${invitation.id}/gifts/${giftId}`, {
+            onSuccess: () => {
+                router.reload({ only: ['gifts'] });
+            },
+        });
     };
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Editar convite" />
-            <form className="flex flex-col gap-8 p-6" onSubmit={handleSubmit}>
-                <section className="flex flex-col gap-2">
-                    <h1 className="text-2xl font-semibold">
-                        Area de edicao do convite
-                    </h1>
-                    <p className="text-sm text-muted-foreground">
-                        Ajuste textos, imagens e informacoes principais do evento.
-                    </p>
-                </section>
+            <div className="flex flex-wrap gap-2 px-6 pt-6">
+                <Button
+                    type="button"
+                    variant={activeTab === 'informacoes' ? 'default' : 'outline'}
+                    onClick={() => setActiveTab('informacoes')}
+                >
+                    Informacoes
+                </Button>
+                <Button
+                    type="button"
+                    variant={activeTab === 'convidados' ? 'default' : 'outline'}
+                    onClick={() => setActiveTab('convidados')}
+                >
+                    Convidados
+                </Button>
+                <Button
+                    type="button"
+                    variant={activeTab === 'presentes' ? 'default' : 'outline'}
+                    onClick={() => setActiveTab('presentes')}
+                >
+                    Presentes
+                </Button>
+            </div>
 
-                <section className="grid gap-6 rounded-2xl border bg-background p-6 shadow-sm lg:grid-cols-[1.2fr_0.8fr]">
-                    <div className="space-y-4">
-                        <div>
-                            <label className="text-sm font-medium">Tipo</label>
-                            <select
-                                className="mt-2 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
-                                value={data.type}
-                                onChange={(event) => setData('type', event.target.value)}
-                            >
-                                <option value="aniversario">Aniversario</option>
-                                <option value="brunch">Brunch</option>
-                                <option value="casamento">Casamento</option>
-                                <option value="corporativo">Corporativo</option>
-                                <option value="cha">Cha especial</option>
-                                <option value="outro">Outro</option>
-                            </select>
-                            {errors.type && (
-                                <p className="mt-1 text-sm text-red-500">{errors.type}</p>
-                            )}
+            {activeTab === 'informacoes' && (
+                <form className="flex flex-col gap-8 p-6" onSubmit={handleSubmit}>
+                    {submitError && (
+                        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                            {submitError}
                         </div>
-                        <div>
-                            <label className="text-sm font-medium">Titulo</label>
-                            <Input
-                                placeholder="Ex: Festa de aniversario da Julia"
-                                value={data.title}
-                                onChange={(event) => setData('title', event.target.value)}
-                            />
-                            {errors.title && (
-                                <p className="mt-1 text-sm text-red-500">{errors.title}</p>
-                            )}
-                        </div>
-                        <div>
-                            <label className="text-sm font-medium">Subtitulo</label>
-                            <Input
-                                placeholder="Ex: Vamos celebrar juntos"
-                                value={data.subtitle}
-                                onChange={(event) => setData('subtitle', event.target.value)}
-                            />
-                        </div>
-                        <div className="grid gap-4 md:grid-cols-2">
+                    )}
+                    <section className="flex flex-col gap-2">
+                        <h1 className="text-2xl font-semibold">Editar Convite</h1>
+                    </section>
+
+                    <section className="grid gap-6 rounded-2xl border bg-background p-6 shadow-sm lg:grid-cols-[1.2fr_0.8fr]">
+                        <div className="space-y-4">
                             <div>
-                                <label className="text-sm font-medium">Data</label>
+                                <label className="text-sm font-medium">Tipo</label>
+                                <select
+                                    className="mt-2 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
+                                    value={data.type}
+                                    onChange={(event) =>
+                                        setData('type', event.target.value)
+                                    }
+                                >
+                                    <option value="aniversario">Aniversario</option>
+                                    <option value="brunch">Brunch</option>
+                                    <option value="casamento">Casamento</option>
+                                    <option value="corporativo">Corporativo</option>
+                                    <option value="cha">Cha especial</option>
+                                    <option value="outro">Outro</option>
+                                </select>
+                                {errors.type && (
+                                    <p className="mt-1 text-sm text-red-500">
+                                        {errors.type}
+                                    </p>
+                                )}
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium">Titulo</label>
                                 <Input
-                                    type="date"
-                                    value={data.event_date}
-                                    onChange={(event) => setData('event_date', event.target.value)}
+                                    placeholder="Ex: Festa de aniversario da Julia"
+                                    value={data.title}
+                                    onChange={(event) =>
+                                        setData('title', event.target.value)
+                                    }
+                                />
+                                {errors.title && (
+                                    <p className="mt-1 text-sm text-red-500">
+                                        {errors.title}
+                                    </p>
+                                )}
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium">Subtitulo</label>
+                                <Input
+                                    placeholder="Ex: Vamos celebrar juntos"
+                                    value={data.subtitle}
+                                    onChange={(event) =>
+                                        setData('subtitle', event.target.value)
+                                    }
+                                />
+                            </div>
+                            <div className="grid gap-4 md:grid-cols-2">
+                                <div>
+                                    <label className="text-sm font-medium">Data</label>
+                                    <Input
+                                        type="date"
+                                        value={data.event_date}
+                                        onChange={(event) =>
+                                            setData('event_date', event.target.value)
+                                        }
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-sm font-medium">Horario</label>
+                                    <Input
+                                        type="time"
+                                        value={data.event_time}
+                                        onChange={(event) =>
+                                            setData('event_time', event.target.value)
+                                        }
+                                    />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium">Local</label>
+                                <Input
+                                    placeholder="Endereco completo do evento"
+                                    value={data.location}
+                                    onChange={(event) =>
+                                        setData('location', event.target.value)
+                                    }
                                 />
                             </div>
                             <div>
-                                <label className="text-sm font-medium">Horario</label>
-                                <Input
-                                    type="time"
-                                    value={data.event_time}
-                                    onChange={(event) => setData('event_time', event.target.value)}
+                                <label className="text-sm font-medium">
+                                    Mensagem principal
+                                </label>
+                                <textarea
+                                    className="h-28 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                                    placeholder="Conte a historia ou o clima do evento"
+                                    value={data.message}
+                                    onChange={(event) =>
+                                        setData('message', event.target.value)
+                                    }
                                 />
                             </div>
                         </div>
-                        <div>
-                            <label className="text-sm font-medium">Local</label>
-                            <Input
-                                placeholder="Endereco completo do evento"
-                                value={data.location}
-                                onChange={(event) => setData('location', event.target.value)}
-                            />
+
+                        <div className="space-y-4">
+                            <div className="rounded-2xl border bg-muted/30 p-4">
+                                <label className="text-sm font-medium">
+                                    Imagem de capa
+                                </label>
+                                <Input
+                                    type="file"
+                                    accept="image/*"
+                                    className="mt-2"
+                                    onChange={handleCoverChange}
+                                />
+                                <div className="mt-4 overflow-hidden rounded-xl border bg-background">
+                                    {coverPreview ? (
+                                        <img
+                                            src={coverPreview}
+                                            alt="Pre-visualizacao da capa"
+                                            className="h-48 w-full object-cover"
+                                        />
+                                    ) : (
+                                        <div className="flex h-48 items-center justify-center text-sm text-muted-foreground">
+                                            Pre-visualizacao da capa
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="rounded-2xl border bg-muted/30 p-4">
+                                <label className="text-sm font-medium">
+                                    Galeria de imagens
+                                </label>
+                                <Input
+                                    type="file"
+                                    accept="image/*"
+                                    multiple
+                                    className="mt-2"
+                                    onChange={handleGalleryChange}
+                                />
+                                <div className="mt-4 grid grid-cols-2 gap-3">
+                                    {galleryPreviews.length === 0 && (
+                                        <div className="col-span-2 rounded-xl border bg-background p-4 text-sm text-muted-foreground">
+                                            Adicione imagens para preencher a galeria.
+                                        </div>
+                                    )}
+                                    {galleryPreviews.map((preview) => (
+                                        <div
+                                            key={preview}
+                                            className="aspect-[4/3] overflow-hidden rounded-xl border bg-background"
+                                        >
+                                            <img
+                                                src={preview}
+                                                alt="Pre-visualizacao da galeria"
+                                                className="h-full w-full object-cover"
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
-                        <div>
+                    </section>
+
+                    <section className="grid gap-6 rounded-2xl border bg-background p-6 shadow-sm lg:grid-cols-2">
+                        <div className="space-y-3">
                             <label className="text-sm font-medium">
-                                Mensagem principal
+                                Detalhes do evento
                             </label>
                             <textarea
-                                className="h-28 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-                                placeholder="Conte a historia ou o clima do evento"
-                                value={data.message}
-                                onChange={(event) => setData('message', event.target.value)}
+                                className="h-32 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                                placeholder="Explique como chegar, traje, lista de confirmacao"
+                                value={data.details}
+                                onChange={(event) =>
+                                    setData('details', event.target.value)
+                                }
                             />
                         </div>
-                    </div>
-
-                    <div className="space-y-4">
-                        <div className="rounded-2xl border bg-muted/30 p-4">
+                        <div className="space-y-3">
                             <label className="text-sm font-medium">
-                                Imagem de capa
+                                Mensagem para convidados
                             </label>
-                            <Input
-                                type="file"
-                                accept="image/*"
-                                className="mt-2"
-                                onChange={handleCoverChange}
+                            <textarea
+                                className="h-32 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                                placeholder="Deixe uma mensagem carinhosa"
+                                value={data.note}
+                                onChange={(event) =>
+                                    setData('note', event.target.value)
+                                }
                             />
-                            <div className="mt-4 overflow-hidden rounded-xl border bg-background">
-                                {coverPreview ? (
-                                    <img
-                                        src={coverPreview}
-                                        alt="Pre-visualizacao da capa"
-                                        className="h-48 w-full object-cover"
-                                    />
-                                ) : (
-                                    <div className="flex h-48 items-center justify-center text-sm text-muted-foreground">
-                                        Pre-visualizacao da capa
-                                    </div>
+                        </div>
+                    </section>
+
+                    <section className="flex flex-col gap-3 rounded-2xl border bg-background p-6 shadow-sm">
+                        <label className="text-sm font-medium">
+                            Links externos (opcional)
+                        </label>
+                        <Input
+                            placeholder="Lista de presentes"
+                            value={data.gift_link}
+                            onChange={(event) =>
+                                setData('gift_link', event.target.value)
+                            }
+                        />
+                        <Input
+                            placeholder="Mapa ou localizacao"
+                            value={data.map_link}
+                            onChange={(event) =>
+                                setData('map_link', event.target.value)
+                            }
+                        />
+                        <Input
+                            placeholder="Playlist do evento"
+                            value={data.playlist_link}
+                            onChange={(event) =>
+                                setData('playlist_link', event.target.value)
+                            }
+                        />
+                    </section>
+
+                    <section className="flex flex-col gap-3 rounded-2xl border bg-background p-6 shadow-sm">
+                        <label className="text-sm font-medium">
+                            Cor do convite
+                        </label>
+                        <div className="flex flex-wrap items-center gap-4">
+                            <input
+                                type="color"
+                                value={data.theme_color}
+                                onChange={(event) =>
+                                    setData('theme_color', event.target.value)
+                                }
+                                className="h-12 w-12 cursor-pointer rounded-full border border-input bg-transparent p-1"
+                                aria-label="Escolher cor do convite"
+                            />
+                            <Input
+                                placeholder="#7a159e"
+                                value={data.theme_color}
+                                onChange={(event) =>
+                                    setData('theme_color', event.target.value)
+                                }
+                            />
+                        </div>
+                    </section>
+
+                    <section className="flex flex-col gap-3 rounded-2xl border bg-background p-6 shadow-sm">
+                        <label className="text-sm font-medium">Cor da fonte</label>
+                        <div className="flex flex-wrap items-center gap-4">
+                            <input
+                                type="color"
+                                value={data.font_color}
+                                onChange={(event) =>
+                                    setData('font_color', event.target.value)
+                                }
+                                className="h-12 w-12 cursor-pointer rounded-full border border-input bg-transparent p-1"
+                                aria-label="Escolher cor da fonte"
+                            />
+                            <Input
+                                placeholder="#ffffff"
+                                value={data.font_color}
+                                onChange={(event) =>
+                                    setData('font_color', event.target.value)
+                                }
+                            />
+                        </div>
+                    </section>
+
+                    <div className="flex flex-wrap gap-3">
+                        <Button type="submit" disabled={processing}>
+                            Salvar
+                        </Button>
+                        <Button asChild variant="outline">
+                            <Link href={`/convites/${invitation.id}/preview`}>Preview</Link>
+                        </Button>
+                    </div>
+                </form>
+            )}
+            {activeTab === 'convidados' && (
+                <div className="flex flex-col gap-8 p-6">
+                    <section className="rounded-2xl border bg-background p-6 shadow-sm">
+                        <h2 className="text-lg font-semibold">Cadastrar convidado</h2>
+                        <form
+                            className="mt-4 grid gap-4 md:grid-cols-3"
+                            onSubmit={handleGuestSubmit}
+                        >
+                            <div>
+                                <Input
+                                    placeholder="Nome"
+                                    value={guestData.name}
+                                    onChange={(event) =>
+                                        setGuestData('name', event.target.value)
+                                    }
+                                />
+                                {guestErrors.name && (
+                                    <p className="mt-1 text-sm text-red-500">
+                                        {guestErrors.name}
+                                    </p>
                                 )}
                             </div>
-                        </div>
+                            <div>
+                                <Input
+                                    placeholder="Email"
+                                    value={guestData.email}
+                                    onChange={(event) =>
+                                        setGuestData('email', event.target.value)
+                                    }
+                                />
+                                {guestErrors.email && (
+                                    <p className="mt-1 text-sm text-red-500">
+                                        {guestErrors.email}
+                                    </p>
+                                )}
+                            </div>
+                            <div>
+                                <Input
+                                    placeholder="Telefone"
+                                    value={guestData.phone}
+                                    onChange={(event) =>
+                                        setGuestData('phone', event.target.value)
+                                    }
+                                />
+                            </div>
+                            <div className="md:col-span-3 flex justify-end">
+                                <Button type="submit" disabled={guestProcessing}>
+                                    Salvar convidado
+                                </Button>
+                            </div>
+                        </form>
+                    </section>
 
-                        <div className="rounded-2xl border bg-muted/30 p-4">
-                            <label className="text-sm font-medium">
-                                Galeria de imagens
-                            </label>
+                    <section className="rounded-2xl border bg-background p-6 shadow-sm">
+                        <h2 className="text-lg font-semibold">Importar CSV</h2>
+                        <p className="mt-2 text-sm text-muted-foreground">
+                            Use colunas: nome, email, telefone.
+                        </p>
+                        <form
+                            className="mt-4 flex flex-wrap items-center gap-4"
+                            onSubmit={handleGuestImport}
+                        >
                             <Input
                                 type="file"
-                                accept="image/*"
-                                multiple
-                                className="mt-2"
-                                onChange={handleGalleryChange}
+                                accept=".csv,text/csv"
+                                onChange={(event) =>
+                                    setGuestImportData(
+                                        'file',
+                                        event.target.files?.[0] ?? null
+                                    )
+                                }
                             />
-                            <div className="mt-4 grid grid-cols-2 gap-3">
-                                {galleryPreviews.length === 0 && (
-                                    <div className="col-span-2 rounded-xl border bg-background p-4 text-sm text-muted-foreground">
-                                        Adicione imagens para preencher a galeria.
-                                    </div>
-                                )}
-                                {galleryPreviews.map((preview) => (
+                            {guestImportErrors.file && (
+                                <p className="text-sm text-red-500">
+                                    {guestImportErrors.file}
+                                </p>
+                            )}
+                            <Button type="submit" disabled={guestImporting}>
+                                Importar
+                            </Button>
+                        </form>
+                    </section>
+
+                    <section className="rounded-2xl border bg-background p-6 shadow-sm">
+                        <h2 className="text-lg font-semibold">Convidados</h2>
+                        {guests.length === 0 && (
+                            <p className="mt-3 text-sm text-muted-foreground">
+                                Nenhum convidado cadastrado.
+                            </p>
+                        )}
+                        {guests.length > 0 && (
+                            <div className="mt-4 space-y-3">
+                                {guests.map((guest) => (
                                     <div
-                                        key={preview}
-                                        className="aspect-[4/3] overflow-hidden rounded-xl border bg-background"
+                                        key={guest.id}
+                                        className="flex flex-col gap-2 rounded-xl border bg-white p-4 md:flex-row md:items-center md:justify-between"
                                     >
-                                        <img
-                                            src={preview}
-                                            alt="Pre-visualizacao da galeria"
-                                            className="h-full w-full object-cover"
-                                        />
+                                        <div>
+                                            <p className="font-medium">{guest.name}</p>
+                                            <p className="text-sm text-muted-foreground">
+                                                {guest.email}
+                                            </p>
+                                            {guest.phone && (
+                                                <p className="text-sm text-muted-foreground">
+                                                    {guest.phone}
+                                                </p>
+                                            )}
+                                        </div>
+                                        <div className="flex flex-wrap gap-2">
+                                            {guest.invite_link && (
+                                                <Button asChild variant="outline" size="sm">
+                                                    <a
+                                                        href={guest.invite_link}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                    >
+                                                        Abrir convite
+                                                    </a>
+                                                </Button>
+                                            )}
+                                            <Button
+                                                type="button"
+                                                variant="destructive"
+                                                size="sm"
+                                                onClick={() => handleGuestDelete(guest.id)}
+                                            >
+                                                Remover
+                                            </Button>
+                                        </div>
                                     </div>
                                 ))}
                             </div>
-                        </div>
-                    </div>
-                </section>
-
-                <section className="grid gap-6 rounded-2xl border bg-background p-6 shadow-sm lg:grid-cols-2">
-                    <div className="space-y-3">
-                        <label className="text-sm font-medium">
-                            Detalhes do evento
-                        </label>
-                        <textarea
-                            className="h-32 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-                            placeholder="Explique como chegar, traje, lista de confirmacao"
-                            value={data.details}
-                            onChange={(event) => setData('details', event.target.value)}
-                        />
-                    </div>
-                    <div className="space-y-3">
-                        <label className="text-sm font-medium">
-                            Mensagem para convidados
-                        </label>
-                        <textarea
-                            className="h-32 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-                            placeholder="Deixe uma mensagem carinhosa"
-                            value={data.note}
-                            onChange={(event) => setData('note', event.target.value)}
-                        />
-                    </div>
-                </section>
-
-                <section className="flex flex-col gap-3 rounded-2xl border bg-background p-6 shadow-sm">
-                    <label className="text-sm font-medium">
-                        Links externos (opcional)
-                    </label>
-                    <Input
-                        placeholder="Lista de presentes"
-                        value={data.gift_link}
-                        onChange={(event) => setData('gift_link', event.target.value)}
-                    />
-                    <Input
-                        placeholder="Mapa ou localizacao"
-                        value={data.map_link}
-                        onChange={(event) => setData('map_link', event.target.value)}
-                    />
-                    <Input
-                        placeholder="Playlist do evento"
-                        value={data.playlist_link}
-                        onChange={(event) => setData('playlist_link', event.target.value)}
-                    />
-                </section>
-
-                <div className="flex flex-wrap gap-3">
-                    <Button type="submit" disabled={processing}>
-                        Salvar alteracoes
-                    </Button>
-                    <Button asChild variant="outline">
-                        <Link href={dashboard()}>Voltar ao dashboard</Link>
-                    </Button>
+                        )}
+                    </section>
                 </div>
-            </form>
+            )}
+
+            {activeTab === 'presentes' && (
+                <div className="flex flex-col gap-8 p-6">
+                    <section className="rounded-2xl border bg-background p-6 shadow-sm">
+                        <h2 className="text-lg font-semibold">Cadastrar presente</h2>
+                        <form
+                            className="mt-4 grid gap-4 md:grid-cols-3"
+                            onSubmit={handleGiftSubmit}
+                        >
+                            <div>
+                                <Input
+                                    placeholder="Titulo"
+                                    value={giftData.name}
+                                    onChange={(event) =>
+                                        setGiftData('name', event.target.value)
+                                    }
+                                />
+                                {giftErrors.name && (
+                                    <p className="mt-1 text-sm text-red-500">
+                                        {giftErrors.name}
+                                    </p>
+                                )}
+                            </div>
+                            <div>
+                                <Input
+                                    placeholder="Link"
+                                    value={giftData.link}
+                                    onChange={(event) =>
+                                        setGiftData('link', event.target.value)
+                                    }
+                                />
+                                {giftErrors.link && (
+                                    <p className="mt-1 text-sm text-red-500">
+                                        {giftErrors.link}
+                                    </p>
+                                )}
+                            </div>
+                            <div>
+                                <Input
+                                    placeholder="Imagem (opcional)"
+                                    value={giftData.image_link}
+                                    onChange={(event) =>
+                                        setGiftData('image_link', event.target.value)
+                                    }
+                                />
+                            </div>
+                            <div className="md:col-span-3 flex justify-end">
+                                <Button type="submit" disabled={giftProcessing}>
+                                    Salvar presente
+                                </Button>
+                            </div>
+                        </form>
+                    </section>
+
+                    <section className="rounded-2xl border bg-background p-6 shadow-sm">
+                        <h2 className="text-lg font-semibold">Presentes sugeridos</h2>
+                        {gifts.length === 0 && (
+                            <p className="mt-3 text-sm text-muted-foreground">
+                                Nenhum presente cadastrado.
+                            </p>
+                        )}
+                        {gifts.length > 0 && (
+                            <div className="mt-4 space-y-3">
+                                {gifts.map((gift) => (
+                                    <div
+                                        key={gift.id}
+                                        className="flex flex-col gap-2 rounded-xl border bg-white p-4 md:flex-row md:items-center md:justify-between"
+                                    >
+                                        <div>
+                                            <p className="font-medium">{gift.name}</p>
+                                            <p className="text-sm text-muted-foreground">
+                                                {gift.link}
+                                            </p>
+                                        </div>
+                                        <div className="flex flex-wrap gap-2">
+                                            <Button asChild variant="outline" size="sm">
+                                                <a
+                                                    href={gift.link}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                >
+                                                    Abrir
+                                                </a>
+                                            </Button>
+                                            <Button
+                                                type="button"
+                                                variant="destructive"
+                                                size="sm"
+                                                onClick={() => handleGiftDelete(gift.id)}
+                                            >
+                                                Remover
+                                            </Button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </section>
+                </div>
+            )}
         </AppLayout>
     );
 }

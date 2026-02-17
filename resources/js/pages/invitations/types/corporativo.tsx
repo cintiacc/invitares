@@ -16,7 +16,17 @@ export default function InvitationCorporativo() {
                             &larr; Voltar aos tipos
                         </Link>
                         <Button asChild>
-                            <Link href="/convites/editar">Editar convite</Link>
+                            <Link
+                                href="/convites"
+                                method="post"
+                                data={{
+                                    type: 'corporativo',
+                                    title: 'Convite corporativo',
+                                    redirect_to_edit: true,
+                                }}
+                            >
+                                Criar convite
+                            </Link>
                         </Button>
                     </header>
 

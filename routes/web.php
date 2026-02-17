@@ -16,8 +16,6 @@ Route::get('/', function () {
 
 Route::get('/convites/novo', fn() => Inertia::render('invitations/create'))
     ->name('invitations.create');
-Route::get('/convites/editar', fn() => Inertia::render('invitations/edit'))
-    ->name('invitations.edit');
 
 Route::get('/convites/tipo/aniversario', fn() => Inertia::render('invitations/types/aniversario'))
     ->name('invitations.types.aniversario');
@@ -57,16 +55,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('invitations.edit');
     Route::put('/convites/{invitation}', [InvitationController::class, 'update'])
         ->name('invitations.update');
+    Route::post('/convites/{invitation}', [InvitationController::class, 'update'])
+        ->name('invitations.update.post');
 
-    Route::get('/guests', [GuestController::class, 'index'])->name('guests.index');
-    Route::post('/guests', [GuestController::class, 'store'])->name('guests.store');
-    Route::delete('/guests/{id}', [GuestController::class, 'destroy'])->name('guests.destroy');
+    Route::post('/convites/{invitation}/guests', [GuestController::class, 'storeForInvitation'])
+        ->name('invitations.guests.store');
+    Route::post('/convites/{invitation}/guests/import', [GuestController::class, 'importCsv'])
+        ->name('invitations.guests.import');
+    Route::delete('/convites/{invitation}/guests/{guest}', [GuestController::class, 'destroyForInvitation'])
+        ->name('invitations.guests.destroy');
 
-    // Rotas de Gifts
-    Route::get('/gifts', [GiftController::class, 'index'])->name('gifts.index');
-    Route::post('/gifts', [GiftController::class, 'store'])->name('gifts.store');
-    Route::delete('/gifts/{gift}', [GiftController::class, 'destroy'])
-        ->name('gifts.destroy');
+    Route::post('/convites/{invitation}/gifts', [GiftController::class, 'storeForInvitation'])
+        ->name('invitations.gifts.store');
+    Route::delete('/convites/{invitation}/gifts/{gift}', [GiftController::class, 'destroyForInvitation'])
+        ->name('invitations.gifts.destroy');
 
 });
 

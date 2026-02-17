@@ -22,10 +22,22 @@ class Invitation extends Model
         'gift_link',
         'map_link',
         'playlist_link',
+        'theme_color',
+        'font_color',
     ];
 
     protected $casts = [
         'gallery_images' => 'array',
         'event_date' => 'date',
     ];
+
+    public function guests()
+    {
+        return $this->hasMany(Guest::class);
+    }
+
+    public function gifts()
+    {
+        return $this->hasMany(Gift::class);
+    }
 }

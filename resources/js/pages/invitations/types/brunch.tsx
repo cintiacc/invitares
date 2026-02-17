@@ -16,7 +16,17 @@ export default function InvitationBrunch() {
                             &larr; Voltar aos tipos
                         </Link>
                         <Button asChild>
-                            <Link href="/convites/editar">Editar convite</Link>
+                            <Link
+                                href="/convites"
+                                method="post"
+                                data={{
+                                    type: 'brunch',
+                                    title: 'Convite de brunch',
+                                    redirect_to_edit: true,
+                                }}
+                            >
+                                Criar convite
+                            </Link>
                         </Button>
                     </header>
 

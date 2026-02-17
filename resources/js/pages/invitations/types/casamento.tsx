@@ -16,7 +16,17 @@ export default function InvitationCasamento() {
                             &larr; Voltar aos tipos
                         </Link>
                         <Button asChild>
-                            <Link href="/convites/editar">Editar convite</Link>
+                            <Link
+                                href="/convites"
+                                method="post"
+                                data={{
+                                    type: 'casamento',
+                                    title: 'Convite de casamento',
+                                    redirect_to_edit: true,
+                                }}
+                            >
+                                Criar convite
+                            </Link>
                         </Button>
                     </header>
 

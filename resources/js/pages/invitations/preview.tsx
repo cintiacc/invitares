@@ -16,6 +16,8 @@ type Invitation = {
   note: string | null;
   cover_image: string | null;
   gallery_images: string[] | null;
+  theme_color: string | null;
+  font_color: string | null;
 };
 
 export default function InvitationPreview({ invitation }: { invitation: Invitation }) {
@@ -23,15 +25,47 @@ export default function InvitationPreview({ invitation }: { invitation: Invitati
     ? `/storage/${invitation.cover_image}`
     : null;
   const gallery = invitation.gallery_images ?? [];
+  const isValidHex = (value: string | null | undefined) =>
+    typeof value === "string" && /^#[0-9a-fA-F]{6}$/.test(value);
+  const baseColor = isValidHex(invitation.theme_color) ? invitation.theme_color! : "#7a159e";
+  const fontColor = isValidHex(invitation.font_color) ? invitation.font_color! : "#ffffff";
+
+  const clamp = (value: number) => Math.min(255, Math.max(0, value));
+  const adjustColor = (hex: string, amount: number) => {
+    const sanitized = hex.replace("#", "");
+    if (sanitized.length !== 6) {
+      return hex;
+    }
+    const num = parseInt(sanitized, 16);
+    const r = clamp((num >> 16) + amount);
+    const g = clamp(((num >> 8) & 0xff) + amount);
+    const b = clamp((num & 0xff) + amount);
+    return `rgb(${r}, ${g}, ${b})`;
+  };
+  const glowOne = adjustColor(baseColor, 70);
+  const glowTwo = adjustColor(baseColor, 40);
+  const glowThree = adjustColor(baseColor, 90);
 
   return (
     <>
       <Head title="Preview do convite" />
-      <section className="relative min-h-[100dvh] overflow-hidden bg-[#7a159e] text-white">
+      <section
+        className="relative min-h-[100dvh] overflow-hidden"
+        style={{ backgroundColor: baseColor, color: fontColor }}
+      >
         <div className="absolute inset-0">
-          <div className="absolute -top-24 right-[-4rem] h-72 w-72 rounded-full bg-[#b357ff] opacity-70 blur-2xl" />
-          <div className="absolute top-40 left-[-6rem] h-64 w-64 rounded-full bg-[#ff8be3] opacity-50 blur-3xl" />
-          <div className="absolute -bottom-32 left-1/3 h-80 w-80 rounded-full bg-[#9b46e4] opacity-60 blur-3xl" />
+          <div
+            className="absolute -top-24 right-[-4rem] h-72 w-72 rounded-full opacity-70 blur-2xl"
+            style={{ backgroundColor: glowOne }}
+          />
+          <div
+            className="absolute top-40 left-[-6rem] h-64 w-64 rounded-full opacity-50 blur-3xl"
+            style={{ backgroundColor: glowTwo }}
+          />
+          <div
+            className="absolute -bottom-32 left-1/3 h-80 w-80 rounded-full opacity-60 blur-3xl"
+            style={{ backgroundColor: glowThree }}
+          />
         </div>
 
         <div className="relative mx-auto flex min-h-[100dvh] w-full max-w-2xl flex-col px-6 pb-14 pt-10">
@@ -42,9 +76,31 @@ export default function InvitationPreview({ invitation }: { invitation: Invitati
             >
               <span className="text-xl">&larr;</span>
             </Link>
-            <span className="rounded-full bg-white/15 px-4 py-2 text-xs font-medium uppercase tracking-[0.2em]">
-              Preview
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="rounded-full bg-white/15 px-4 py-2 text-xs font-medium uppercase tracking-[0.2em]">
+                Preview
+              </span>
+              <Link
+                href={`/convites/${invitation.id}/editar`}
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-white/15 ring-1 ring-white/20 transition hover:bg-white/25"
+                aria-label="Editar convite"
+                title="Editar convite"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.7"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="h-5 w-5"
+                  aria-hidden="true"
+                >
+                  <path d="M12 20h9" />
+                  <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                </svg>
+              </Link>
+            </div>
           </header>
 
           <div className="mt-12 flex flex-1 flex-col items-center text-center">
@@ -54,7 +110,7 @@ export default function InvitationPreview({ invitation }: { invitation: Invitati
                   {coverUrl ? (
                     <img src={coverUrl} alt="Capa do convite" className="h-full w-full object-cover" />
                   ) : (
-                    <div className="flex h-full items-center justify-center text-sm text-white/70">
+                    <div className="flex h-full items-center justify-center text-sm opacity-70">
                       Imagem do convite
                     </div>
                   )}
@@ -64,9 +120,9 @@ export default function InvitationPreview({ invitation }: { invitation: Invitati
 
             <h1 className="text-3xl font-semibold md:text-4xl">{invitation.title}</h1>
             {invitation.subtitle && (
-              <p className="mt-2 text-sm text-white/80">{invitation.subtitle}</p>
+              <p className="mt-2 text-sm opacity-80">{invitation.subtitle}</p>
             )}
-            <p className="mt-3 text-sm text-white/70 md:text-base">
+            <p className="mt-3 text-sm opacity-70 md:text-base">
               {invitation.event_date
                 ? new Date(invitation.event_date).toLocaleDateString()
                 : "Sem data"}
@@ -74,11 +130,11 @@ export default function InvitationPreview({ invitation }: { invitation: Invitati
             </p>
 
             {invitation.location && (
-              <p className="mt-2 text-sm text-white/70">{invitation.location}</p>
+              <p className="mt-2 text-sm opacity-70">{invitation.location}</p>
             )}
 
             {invitation.message && (
-              <p className="mt-6 max-w-md text-sm text-white/70">
+              <p className="mt-6 max-w-md text-sm opacity-70">
                 {invitation.message}
               </p>
             )}
@@ -102,12 +158,12 @@ export default function InvitationPreview({ invitation }: { invitation: Invitati
 
             <div className="mt-10 flex w-full flex-col gap-3">
               {invitation.details && (
-                <div className="rounded-2xl bg-white/10 p-4 text-sm text-white/80">
+                <div className="rounded-2xl bg-white/10 p-4 text-sm opacity-80">
                   {invitation.details}
                 </div>
               )}
               {invitation.note && (
-                <div className="rounded-2xl bg-white/10 p-4 text-sm text-white/80">
+                <div className="rounded-2xl bg-white/10 p-4 text-sm opacity-80">
                   {invitation.note}
                 </div>
               )}
@@ -117,29 +173,22 @@ export default function InvitationPreview({ invitation }: { invitation: Invitati
               <div className="flex items-center justify-between text-sm font-medium">
                 <Button
                   type="button"
-                  className="flex-1 rounded-full bg-white text-[#7a159e] hover:bg-white/90"
+                  className="flex-1 rounded-full bg-white text-inherit hover:bg-white/90"
+                  style={{ color: fontColor }}
                 >
                   Aceitar convite
                 </Button>
                 <span className="mx-3 h-8 w-px bg-white/20" />
-                <button className="flex-1 rounded-full px-4 py-2 text-white/80">
+                <button className="flex-1 rounded-full px-4 py-2 opacity-80">
                   Talvez
                 </button>
                 <span className="mx-3 h-8 w-px bg-white/20" />
-                <button className="flex-1 rounded-full px-4 py-2 text-white/80">
+                <button className="flex-1 rounded-full px-4 py-2 opacity-80">
                   Nao vou
                 </button>
               </div>
             </div>
 
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Button asChild variant="secondary">
-                <Link href={`/convites/${invitation.id}/editar`}>Editar convite</Link>
-              </Button>
-              <Button asChild variant="outline">
-                <Link href={dashboard()}>Voltar ao dashboard</Link>
-              </Button>
-            </div>
           </div>
         </div>
       </section>

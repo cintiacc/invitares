@@ -16,7 +16,17 @@ export default function InvitationAniversario() {
                             &larr; Voltar aos tipos
                         </Link>
                         <Button asChild>
-                            <Link href="/convites/editar">Editar convite</Link>
+                            <Link
+                                href="/convites"
+                                method="post"
+                                data={{
+                                    type: 'aniversario',
+                                    title: 'Convite de aniversario',
+                                    redirect_to_edit: true,
+                                }}
+                            >
+                                Criar convite
+                            </Link>
                         </Button>
                     </header>
 
