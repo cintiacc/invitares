@@ -25,6 +25,10 @@ type InvitationLayoutProps = {
   rightHeader?: ReactNode;
   badgeLabel: string;
   onAccept?: () => void;
+  onMaybe?: () => void;
+  onReject?: () => void;
+  selectedResponse?: "accepted" | "rejected" | "maybe" | null;
+  responsesDisabled?: boolean;
   footerNote?: string;
 };
 
@@ -34,6 +38,10 @@ export function InvitationLayout({
   rightHeader,
   badgeLabel,
   onAccept,
+  onMaybe,
+  onReject,
+  selectedResponse,
+  responsesDisabled = false,
   footerNote,
 }: InvitationLayoutProps) {
   const coverUrl = invitation.cover_image ? `/storage/${invitation.cover_image}` : null;
@@ -53,6 +61,14 @@ export function InvitationLayout({
     const g = clamp(((num >> 8) & 0xff) + amount);
     const b = clamp((num & 0xff) + amount);
     return `rgb(${r}, ${g}, ${b})`;
+  };
+
+  const buttonStyle = (isActive: boolean) => {
+    if (isActive) {
+      return { backgroundColor: "#ffffff", color: baseColor };
+    }
+
+    return { backgroundColor: "rgba(255,255,255,0.08)", color: fontColor };
   };
 
   return (
@@ -151,18 +167,31 @@ export function InvitationLayout({
             <div className="grid grid-cols-3 gap-2 text-sm font-medium">
               <Button
                 type="button"
-                className="h-10 w-full rounded-full bg-white hover:bg-white/90"
-                style={{ color: baseColor }}
+                disabled={responsesDisabled}
+                className="h-10 w-full rounded-full transition"
+                style={buttonStyle(selectedResponse === "accepted")}
                 onClick={onAccept}
               >
-                Aceitar 
+                Aceitar
               </Button>
-              <button className="h-10 w-full rounded-full px-3 py-2 text-center opacity-80 hover:bg-white/10">
+              <Button
+                type="button"
+                disabled={responsesDisabled}
+                className="h-10 w-full rounded-full px-3 py-2 text-center transition"
+                style={buttonStyle(selectedResponse === "maybe")}
+                onClick={onMaybe}
+              >
                 Talvez
-              </button>
-              <button className="h-10 w-full rounded-full px-3 py-2 text-center opacity-80 hover:bg-white/10">
-                Não irei
-              </button>
+              </Button>
+              <Button
+                type="button"
+                disabled={responsesDisabled}
+                className="h-10 w-full rounded-full px-3 py-2 text-center transition"
+                style={buttonStyle(selectedResponse === "rejected")}
+                onClick={onReject}
+              >
+                Nao irei
+              </Button>
             </div>
           </div>
 

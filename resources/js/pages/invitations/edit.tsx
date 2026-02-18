@@ -410,7 +410,7 @@ export default function EditInvitation({ invitation, guests, gifts }: EditInvita
                                         setData('type', event.target.value)
                                     }
                                 >
-                                    <option value="aniversario">Aniversario</option>
+                                    <option value="aniversario">Aniversário</option>
                                     <option value="brunch">Brunch</option>
                                     <option value="casamento">Casamento</option>
                                     <option value="corporativo">Corporativo</option>
@@ -426,7 +426,7 @@ export default function EditInvitation({ invitation, guests, gifts }: EditInvita
                             <div>
                                 <label className="text-sm font-medium">Titulo</label>
                                 <Input
-                                    placeholder="Ex: Festa de aniversario da Julia"
+                                    placeholder="Ex: Festa de aniversário da Julia"
                                     value={data.title}
                                     onChange={(event) =>
                                         setData('title', event.target.value)
