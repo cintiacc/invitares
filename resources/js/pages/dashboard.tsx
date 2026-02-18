@@ -3,6 +3,7 @@
 import { Head, Link, usePage } from "@inertiajs/react";
 
 import AppLayout from "@/layouts/app-layout";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { dashboard } from "@/routes";
 import type { BreadcrumbItem } from "@/types";
@@ -13,12 +14,33 @@ type Invitation = {
   title: string;
   event_date: string | null;
   event_time: string | null;
+  cover_image: string | null;
+};
+
+type LatestUpdate = {
+  id: number;
+  guest_name: string;
+  invitation_title: string;
+  status_text: string;
+  confirmed_at: string | null;
 };
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: "Dashboard", href: dashboard().url }];
 
+function getInitials(name: string): string {
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
+}
+
 export default function Dashboard() {
-  const { invitations = [] } = usePage().props as { invitations?: Invitation[] };
+  const { invitations = [], latest_updates = [] } = usePage().props as {
+    invitations?: Invitation[];
+    latest_updates?: LatestUpdate[];
+  };
   const hasInvites = invitations.length > 0;
 
   return (
@@ -78,21 +100,70 @@ export default function Dashboard() {
                 <Link
                   key={invitation.id}
                   href={`/convites/${invitation.id}/preview`}
-                  className="rounded-2xl border bg-white p-5 transition hover:-translate-y-1 hover:shadow-md"
+                  className="overflow-hidden rounded-2xl border bg-white transition hover:-translate-y-1 hover:shadow-md"
                 >
-                  <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-                    {invitation.type}
-                  </p>
-                  <p className="mt-2 text-lg font-semibold">{invitation.title}</p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {invitation.event_date
-                      ? new Date(invitation.event_date).toLocaleDateString()
-                      : "Sem data"}
-                    {invitation.event_time ? ` - ${invitation.event_time}` : ""}
-                  </p>
+                  {invitation.cover_image ? (
+                    <div className="h-40 w-full bg-muted">
+                      <img
+                        src={`/storage/${invitation.cover_image}`}
+                        alt={`Capa do convite ${invitation.title}`}
+                        className="h-full w-full object-cover"
+                        loading="lazy"
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex h-40 w-full items-center justify-center bg-muted/40 text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                      Sem capa
+                    </div>
+                  )}
+
+                  <div className="p-5">
+                    <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                      {invitation.type}
+                    </p>
+                    <p className="mt-2 text-lg font-semibold">{invitation.title}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {invitation.event_date
+                        ? new Date(invitation.event_date).toLocaleDateString()
+                        : "Sem data"}
+                      {invitation.event_time ? ` - ${invitation.event_time}` : ""}
+                    </p>
+                  </div>
                 </Link>
               ))}
             </div>
+          </div>
+        )}
+
+        {hasInvites && (
+          <div className="rounded-3xl border bg-background p-8 shadow-sm">
+            <h2 className="text-lg font-semibold">Últimas atualizações</h2>
+
+            {latest_updates.length === 0 ? (
+              <p className="mt-4 text-sm text-muted-foreground">
+                Nenhuma resposta de convidados ainda.
+              </p>
+            ) : (
+              <div className="mt-4 overflow-hidden rounded-xl border border-border/60">
+                {latest_updates.map((update) => (
+                  <div
+                    key={update.id}
+                    className="flex items-center gap-3 border-b border-border/50 px-4 py-3 last:border-b-0"
+                  >
+                    <Avatar className="h-9 w-9">
+                      <AvatarFallback className="bg-muted text-xs font-semibold text-foreground">
+                        {getInitials(update.guest_name)}
+                      </AvatarFallback>
+                    </Avatar>
+
+                    <p className="text-sm text-foreground">
+                      <span className="font-medium">{update.guest_name}</span> {update.status_text} o convite para{" "}
+                      <span className="font-medium">{update.invitation_title}</span>.
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>

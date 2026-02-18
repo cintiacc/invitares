@@ -13,7 +13,13 @@ class Guest extends Model
         'phone',
         'confirmed',
         'confirmed_at',
+        'response_status',
         'invite_link',
+    ];
+
+    protected $casts = [
+        'confirmed' => 'boolean',
+        'confirmed_at' => 'datetime',
     ];
 
     public function invitation()

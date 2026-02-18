@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 export default function InvitationAniversario() {
     return (
         <>
-            <Head title="Convite aniversario" />
+            <Head title="Convite aniversário" />
             <div className="min-h-[100dvh] bg-gradient-to-br from-[#fff1e1] via-[#f6f4ff] to-[#e7f6ff] text-[#1f1b16]">
                 <div className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 py-10">
                     <header className="flex items-center justify-between">
@@ -21,7 +21,7 @@ export default function InvitationAniversario() {
                                 method="post"
                                 data={{
                                     type: 'aniversario',
-                                    title: 'Convite de aniversario',
+                                    title: 'Convite de aniversário',
                                     redirect_to_edit: true,
                                 }}
                             >
@@ -33,7 +33,7 @@ export default function InvitationAniversario() {
                     <section className="grid items-center gap-10 lg:grid-cols-[1.1fr_0.9fr]">
                         <div className="space-y-5">
                             <p className="text-xs uppercase tracking-[0.4em] text-[#8a6a4f]">
-                                Convite aniversario
+                                Convite aniversário
                             </p>
                             <h1 className="text-3xl font-semibold leading-tight md:text-5xl">
                                 Uma pagina vibrante para celebrar com quem voce ama.
