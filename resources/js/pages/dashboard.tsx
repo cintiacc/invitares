@@ -25,9 +25,9 @@ export default function Dashboard() {
     <AppLayout breadcrumbs={breadcrumbs}>
       <Head title="Dashboard" />
 
-      <div className="flex flex-col gap-6 p-4">
+      <div className="flex flex-col gap-8 p-2 sm:p-4">
         {!hasInvites && (
-          <div className="relative flex min-h-[calc(100vh-12rem)] items-center justify-center overflow-hidden rounded-3xl border bg-gradient-to-b from-[#f7f2ea] via-[#e7f0f6] to-[#f6dcc9] p-8 text-center text-[#2a2622] shadow-sm">
+          <div className="relative flex min-h-[calc(100vh-9rem)] items-center justify-center overflow-hidden rounded-3xl border bg-gradient-to-b from-[#f7f2ea] via-[#e7f0f6] to-[#f6dcc9] p-10 text-center text-[#2a2622] shadow-sm sm:p-14">
             <div className="pointer-events-none absolute -top-24 right-10 h-48 w-48 rounded-full bg-[#fff6ec] blur-3xl" />
             <div className="pointer-events-none absolute -bottom-20 left-6 h-40 w-40 rounded-full bg-[#cfe8f7] blur-3xl" />
 
@@ -66,19 +66,19 @@ export default function Dashboard() {
         )}
 
         {hasInvites && (
-          <div className="rounded-2xl border bg-background p-6 shadow-sm">
+          <div className="rounded-3xl border bg-background p-8 shadow-sm">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold">Seus convites</h2>
               <Button asChild variant="secondary">
                 <Link href="/convites/novo">Novo convite</Link>
               </Button>
             </div>
-            <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <div className="mt-6 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
               {invitations.map((invitation) => (
                 <Link
                   key={invitation.id}
                   href={`/convites/${invitation.id}/preview`}
-                  className="rounded-2xl border bg-white p-4 transition hover:-translate-y-1 hover:shadow-md"
+                  className="rounded-2xl border bg-white p-5 transition hover:-translate-y-1 hover:shadow-md"
                 >
                   <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
                     {invitation.type}
@@ -88,7 +88,7 @@ export default function Dashboard() {
                     {invitation.event_date
                       ? new Date(invitation.event_date).toLocaleDateString()
                       : "Sem data"}
-                    {invitation.event_time ? ` â€¢ ${invitation.event_time}` : ""}
+                    {invitation.event_time ? ` - ${invitation.event_time}` : ""}
                   </p>
                 </Link>
               ))}

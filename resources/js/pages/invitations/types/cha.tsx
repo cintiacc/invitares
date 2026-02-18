@@ -69,7 +69,7 @@ export default function InvitationCha() {
                         {[
                             'Mensagem de boas vindas',
                             'Detalhes do cha',
-                            'Horario e local',
+                            'Horário e local',
                         ].map((item) => (
                             <div
                                 key={item}

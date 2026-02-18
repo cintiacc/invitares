@@ -69,7 +69,7 @@ export default function InvitationBrunch() {
                         {[
                             'Boas vindas',
                             'Detalhes do brunch',
-                            'Horario e local',
+                            'Horário e local',
                         ].map((item) => (
                             <div
                                 key={item}
