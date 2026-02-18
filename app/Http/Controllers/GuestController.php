@@ -157,8 +157,15 @@ class GuestController extends Controller
 
     public function invite(Guest $guest)
     {
+        $guest->load('invitation');
+
+        if (!$guest->invitation) {
+            abort(404);
+        }
+
         return inertia('invitation', [
             'guest' => $guest,
+            'invitation' => $guest->invitation,
         ]);
     }
 

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Invitation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 class InvitationController extends Controller
@@ -161,9 +162,11 @@ class InvitationController extends Controller
                 'playlist_link' => 'nullable|string|max:255',
                 'theme_color' => 'nullable|string|max:20',
                 'font_color' => 'nullable|string|max:20',
-                'font_color' => 'nullable|string|max:20',
                 'cover_image' => 'nullable|image|max:2048',
                 'gallery_images.*' => 'nullable|image|max:2048',
+                'remove_cover_image' => 'nullable|boolean',
+                'removed_gallery_images' => 'nullable|array',
+                'removed_gallery_images.*' => 'string',
             ]);
         } catch (ValidationException $exception) {
             Log::warning('Invitation update validation failed.', [
@@ -205,13 +208,64 @@ class InvitationController extends Controller
             }
         }
 
-        $coverPath = $invitation->cover_image;
+        $deletePublicPath = function (?string $path) use ($invitation) {
+            if (!$path) {
+                return;
+            }
+
+            try {
+                $deleted = Storage::disk('public')->delete($path);
+                if (!$deleted) {
+                    Log::warning('Failed to delete invitation media file from storage.', [
+                        'invitation_id' => $invitation->id,
+                        'path' => $path,
+                    ]);
+                }
+            } catch (\Throwable $exception) {
+                Log::warning('Exception while deleting invitation media file from storage.', [
+                    'invitation_id' => $invitation->id,
+                    'path' => $path,
+                    'error' => $exception->getMessage(),
+                ]);
+            }
+        };
+
+        $currentCoverPath = $invitation->cover_image;
+        $removeCoverImage = $request->boolean('remove_cover_image');
+        $coverPath = $removeCoverImage ? null : $currentCoverPath;
+
+        if ($removeCoverImage && $currentCoverPath) {
+            $deletePublicPath($currentCoverPath);
+        }
+
         if ($request->hasFile('cover_image')) {
+            if (!$removeCoverImage && $currentCoverPath) {
+                $deletePublicPath($currentCoverPath);
+            }
             $coverPath = $request->file('cover_image')->store('invitations/covers', 'public');
         }
 
-        $galleryPaths = $invitation->gallery_images ?? [];
+        $currentGalleryPaths = $invitation->gallery_images ?? [];
+        $allowedGalleryPaths = array_flip($currentGalleryPaths);
+        $removedGalleryImages = array_values(array_filter(
+            $data['removed_gallery_images'] ?? [],
+            fn ($path) => isset($allowedGalleryPaths[$path])
+        ));
+
+        $galleryPaths = array_values(array_filter(
+            $currentGalleryPaths,
+            fn ($path) => !in_array($path, $removedGalleryImages, true)
+        ));
+
+        foreach ($removedGalleryImages as $removedPath) {
+            $deletePublicPath($removedPath);
+        }
+
         if ($request->hasFile('gallery_images')) {
+            // Keep current semantics: uploading gallery files replaces previous gallery set.
+            foreach ($galleryPaths as $existingPath) {
+                $deletePublicPath($existingPath);
+            }
             $galleryPaths = [];
             foreach ($request->file('gallery_images') as $file) {
                 if (!$file) {

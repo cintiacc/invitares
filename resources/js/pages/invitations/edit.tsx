@@ -6,7 +6,16 @@ import AppLayout from '@/layouts/app-layout';
 import type { BreadcrumbItem } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
 import { dashboard } from '@/routes';
+import { Eye, Mail, MessageCircle, Trash2, X } from 'lucide-react';
 
 type Invitation = {
     id: number;
@@ -80,10 +89,14 @@ export default function EditInvitation({ invitation, guests, gifts }: EditInvita
         font_color: invitation.font_color ?? '#ffffff',
         cover_image: null as File | null,
         gallery_images: [] as File[],
+        remove_cover_image: false,
+        removed_gallery_images: [] as string[],
         _method: 'put',
     });
     const [coverPreview, setCoverPreview] = useState<string | null>(null);
     const [galleryPreviews, setGalleryPreviews] = useState<string[]>([]);
+    const [removeCoverImage, setRemoveCoverImage] = useState(false);
+    const [removedGalleryImages, setRemovedGalleryImages] = useState<string[]>([]);
     const [submitError, setSubmitError] = useState<string | null>(null);
 
     const {
@@ -125,13 +138,40 @@ export default function EditInvitation({ invitation, guests, gifts }: EditInvita
     useEffect(() => {
         if (invitation.cover_image) {
             setCoverPreview(`/storage/${invitation.cover_image}`);
+        } else {
+            setCoverPreview(null);
         }
         if (invitation.gallery_images?.length) {
             setGalleryPreviews(
                 invitation.gallery_images.map((image) => `/storage/${image}`)
             );
+        } else {
+            setGalleryPreviews([]);
         }
+        setRemoveCoverImage(false);
+        setRemovedGalleryImages([]);
     }, [invitation.cover_image, invitation.gallery_images]);
+
+    useEffect(() => {
+        setData('remove_cover_image', removeCoverImage);
+    }, [removeCoverImage, setData]);
+
+    useEffect(() => {
+        setData('removed_gallery_images', removedGalleryImages);
+    }, [removedGalleryImages, setData]);
+
+    useEffect(() => {
+        return () => {
+            if (coverPreview && !coverPreview.startsWith('/storage/')) {
+                URL.revokeObjectURL(coverPreview);
+            }
+            galleryPreviews.forEach((preview) => {
+                if (!preview.startsWith('/storage/')) {
+                    URL.revokeObjectURL(preview);
+                }
+            });
+        };
+    }, [coverPreview, galleryPreviews]);
 
     const handleCoverChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -141,6 +181,7 @@ export default function EditInvitation({ invitation, guests, gifts }: EditInvita
         if (coverPreview && !coverPreview.startsWith('/storage/')) {
             URL.revokeObjectURL(coverPreview);
         }
+        setRemoveCoverImage(false);
         setData('cover_image', file);
         setCoverPreview(URL.createObjectURL(file));
     };
@@ -156,11 +197,54 @@ export default function EditInvitation({ invitation, guests, gifts }: EditInvita
         setGalleryPreviews(files.map((file) => URL.createObjectURL(file)));
     };
 
+    const handleRemoveCover = () => {
+        if (!coverPreview) {
+            return;
+        }
+
+        if (!coverPreview.startsWith('/storage/')) {
+            URL.revokeObjectURL(coverPreview);
+            setRemoveCoverImage(false);
+        } else {
+            setRemoveCoverImage(true);
+        }
+
+        setData('cover_image', null);
+        setCoverPreview(null);
+    };
+
+    const handleRemoveGalleryPreview = (index: number, preview: string) => {
+        setGalleryPreviews((current) =>
+            current.filter((_, currentIndex) => currentIndex !== index)
+        );
+
+        if (!preview.startsWith('/storage/')) {
+            URL.revokeObjectURL(preview);
+            setData(
+                'gallery_images',
+                data.gallery_images.filter((_, currentIndex) => currentIndex !== index)
+            );
+            return;
+        }
+
+        const relativePath = preview.replace('/storage/', '');
+        setRemovedGalleryImages((current) => {
+            if (current.includes(relativePath)) {
+                return current;
+            }
+            return [...current, relativePath];
+        });
+    };
+
     const handleSubmit = (event: React.FormEvent) => {
         event.preventDefault();
         setSubmitError(null);
         post(`/convites/${invitation.id}`, {
             forceFormData: true,
+            onSuccess: () => {
+                setRemoveCoverImage(false);
+                setRemovedGalleryImages([]);
+            },
             onError: () => {
                 setSubmitError(
                     'Nao foi possivel salvar. Verifique os campos obrigatorios e tente novamente.'
@@ -198,6 +282,49 @@ export default function EditInvitation({ invitation, guests, gifts }: EditInvita
         });
     };
 
+    const copyInviteLink = async (inviteLink: string) => {
+        try {
+            if (navigator?.clipboard?.writeText) {
+                await navigator.clipboard.writeText(inviteLink);
+            }
+        } catch (error) {
+            console.error('Nao foi possivel copiar o link do convite.', error);
+        }
+    };
+
+    const buildInviteMessage = (guest: Guest) => {
+        const eventTitle = invitation.title || 'nosso evento';
+        return `Ola ${guest.name}! Voce foi convidado(a) para ${eventTitle}. Acesse seu convite: ${guest.invite_link}`;
+    };
+
+    const handleSendInviteWhatsapp = async (guest: Guest) => {
+        if (!guest.invite_link) {
+            return;
+        }
+
+        await copyInviteLink(guest.invite_link);
+        const phone = (guest.phone ?? '').replace(/\D/g, '');
+        const text = encodeURIComponent(buildInviteMessage(guest));
+        const whatsappUrl = phone
+            ? `https://wa.me/${phone}?text=${text}`
+            : `https://wa.me/?text=${text}`;
+
+        window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+    };
+
+    const handleSendInviteEmail = async (guest: Guest) => {
+        if (!guest.invite_link) {
+            return;
+        }
+
+        await copyInviteLink(guest.invite_link);
+        const subject = encodeURIComponent(`Convite: ${invitation.title || 'Evento'}`);
+        const body = encodeURIComponent(buildInviteMessage(guest));
+        const recipient = guest.email ?? '';
+
+        window.location.href = `mailto:${recipient}?subject=${subject}&body=${body}`;
+    };
+
     const handleGiftSubmit = (event: React.FormEvent) => {
         event.preventDefault();
         postGift(`/convites/${invitation.id}/gifts`, {
@@ -216,35 +343,53 @@ export default function EditInvitation({ invitation, guests, gifts }: EditInvita
         });
     };
 
+    const tabs = [
+        { key: 'informacoes' as const, label: 'Informações' },
+        { key: 'convidados' as const, label: 'Convidados' },
+        { key: 'presentes' as const, label: 'Presentes' },
+    ];
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Editar convite" />
-            <div className="flex flex-wrap gap-2 px-6 pt-6">
-                <Button
-                    type="button"
-                    variant={activeTab === 'informacoes' ? 'default' : 'outline'}
-                    onClick={() => setActiveTab('informacoes')}
+            <div className="px-6 pt-6">
+                <div
+                    role="tablist"
+                    aria-label="Abas de edicao do convite"
+                    className="inline-flex w-full max-w-xl rounded-xl border bg-muted/30 p-1"
                 >
-                    Informacoes
-                </Button>
-                <Button
-                    type="button"
-                    variant={activeTab === 'convidados' ? 'default' : 'outline'}
-                    onClick={() => setActiveTab('convidados')}
-                >
-                    Convidados
-                </Button>
-                <Button
-                    type="button"
-                    variant={activeTab === 'presentes' ? 'default' : 'outline'}
-                    onClick={() => setActiveTab('presentes')}
-                >
-                    Presentes
-                </Button>
+                    {tabs.map((tab) => {
+                        const isActive = activeTab === tab.key;
+                        return (
+                            <button
+                                key={tab.key}
+                                type="button"
+                                role="tab"
+                                id={`tab-${tab.key}`}
+                                aria-selected={isActive}
+                                aria-controls={`panel-${tab.key}`}
+                                onClick={() => setActiveTab(tab.key)}
+                                className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition ${
+                                    isActive
+                                        ? 'bg-background text-foreground shadow-sm'
+                                        : 'text-muted-foreground hover:text-foreground'
+                                }`}
+                            >
+                                {tab.label}
+                            </button>
+                        );
+                    })}
+                </div>
             </div>
 
             {activeTab === 'informacoes' && (
-                <form className="flex flex-col gap-8 p-6" onSubmit={handleSubmit}>
+                <form
+                    className="flex flex-col gap-8 p-6"
+                    onSubmit={handleSubmit}
+                    role="tabpanel"
+                    id="panel-informacoes"
+                    aria-labelledby="tab-informacoes"
+                >
                     {submitError && (
                         <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                             {submitError}
@@ -255,7 +400,7 @@ export default function EditInvitation({ invitation, guests, gifts }: EditInvita
                     </section>
 
                     <section className="grid gap-6 rounded-2xl border bg-background p-6 shadow-sm lg:grid-cols-[1.2fr_0.8fr]">
-                        <div className="space-y-4">
+                        <div className="min-w-0 space-y-4">
                             <div>
                                 <label className="text-sm font-medium">Tipo</label>
                                 <select
@@ -315,7 +460,7 @@ export default function EditInvitation({ invitation, guests, gifts }: EditInvita
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-sm font-medium">Horario</label>
+                                    <label className="text-sm font-medium">Horário</label>
                                     <Input
                                         type="time"
                                         value={data.event_time}
@@ -350,7 +495,7 @@ export default function EditInvitation({ invitation, guests, gifts }: EditInvita
                             </div>
                         </div>
 
-                        <div className="space-y-4">
+                        <div className="min-w-0 space-y-4">
                             <div className="rounded-2xl border bg-muted/30 p-4">
                                 <label className="text-sm font-medium">
                                     Imagem de capa
@@ -358,16 +503,27 @@ export default function EditInvitation({ invitation, guests, gifts }: EditInvita
                                 <Input
                                     type="file"
                                     accept="image/*"
-                                    className="mt-2"
+                                    className="mt-2 w-full min-w-0"
                                     onChange={handleCoverChange}
                                 />
-                                <div className="mt-4 overflow-hidden rounded-xl border bg-background">
+                                <div className="relative mt-4 w-full max-w-full overflow-hidden rounded-xl border bg-background">
                                     {coverPreview ? (
-                                        <img
-                                            src={coverPreview}
-                                            alt="Pre-visualizacao da capa"
-                                            className="h-48 w-full object-cover"
-                                        />
+                                        <>
+                                            <button
+                                                type="button"
+                                                onClick={handleRemoveCover}
+                                                className="absolute right-2 top-2 z-10 inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/60 text-white transition hover:bg-black/80"
+                                                title="Remover imagem de capa"
+                                                aria-label="Remover imagem de capa"
+                                            >
+                                                <X className="h-4 w-4" />
+                                            </button>
+                                            <img
+                                                src={coverPreview}
+                                                alt="Pre-visualizacao da capa"
+                                                className="block h-40 w-full max-w-full object-cover sm:h-48"
+                                            />
+                                        </>
                                     ) : (
                                         <div className="flex h-48 items-center justify-center text-sm text-muted-foreground">
                                             Pre-visualizacao da capa
@@ -384,27 +540,40 @@ export default function EditInvitation({ invitation, guests, gifts }: EditInvita
                                     type="file"
                                     accept="image/*"
                                     multiple
-                                    className="mt-2"
+                                    className="mt-2 w-full min-w-0"
                                     onChange={handleGalleryChange}
                                 />
-                                <div className="mt-4 grid grid-cols-2 gap-3">
+                                <div className="mt-4 w-full max-w-full min-w-0">
                                     {galleryPreviews.length === 0 && (
-                                        <div className="col-span-2 rounded-xl border bg-background p-4 text-sm text-muted-foreground">
+                                        <div className="rounded-xl border bg-background p-4 text-sm text-muted-foreground">
                                             Adicione imagens para preencher a galeria.
                                         </div>
                                     )}
-                                    {galleryPreviews.map((preview) => (
-                                        <div
-                                            key={preview}
-                                            className="aspect-[4/3] overflow-hidden rounded-xl border bg-background"
-                                        >
-                                            <img
-                                                src={preview}
-                                                alt="Pre-visualizacao da galeria"
-                                                className="h-full w-full object-cover"
-                                            />
+                                    {galleryPreviews.length > 0 && (
+                                        <div className="flex w-full max-w-full min-w-0 items-center gap-2 overflow-x-auto rounded-xl border bg-background p-2">
+                                            {galleryPreviews.map((preview, index) => (
+                                                <div
+                                                    key={preview}
+                                                    className="relative h-14 w-14 shrink-0 overflow-hidden rounded-md border bg-muted/20 sm:h-16 sm:w-16"
+                                                >
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleRemoveGalleryPreview(index, preview)}
+                                                        className="absolute right-1 top-1 z-10 inline-flex h-4 w-4 items-center justify-center rounded-full bg-black/70 text-white transition hover:bg-black/90"
+                                                        title="Remover imagem da galeria"
+                                                        aria-label="Remover imagem da galeria"
+                                                    >
+                                                        <X className="h-3 w-3" />
+                                                    </button>
+                                                    <img
+                                                        src={preview}
+                                                        alt="Pre-visualizacao da galeria"
+                                                        className="h-full w-full object-cover"
+                                                    />
+                                                </div>
+                                            ))}
                                         </div>
-                                    ))}
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -523,7 +692,12 @@ export default function EditInvitation({ invitation, guests, gifts }: EditInvita
                 </form>
             )}
             {activeTab === 'convidados' && (
-                <div className="flex flex-col gap-8 p-6">
+                <div
+                    className="flex flex-col gap-8 p-6"
+                    role="tabpanel"
+                    id="panel-convidados"
+                    aria-labelledby="tab-convidados"
+                >
                     <section className="rounded-2xl border bg-background p-6 shadow-sm">
                         <h2 className="text-lg font-semibold">Cadastrar convidado</h2>
                         <form
@@ -613,46 +787,80 @@ export default function EditInvitation({ invitation, guests, gifts }: EditInvita
                             </p>
                         )}
                         {guests.length > 0 && (
-                            <div className="mt-4 space-y-3">
-                                {guests.map((guest) => (
-                                    <div
-                                        key={guest.id}
-                                        className="flex flex-col gap-2 rounded-xl border bg-white p-4 md:flex-row md:items-center md:justify-between"
-                                    >
-                                        <div>
-                                            <p className="font-medium">{guest.name}</p>
-                                            <p className="text-sm text-muted-foreground">
-                                                {guest.email}
-                                            </p>
-                                            {guest.phone && (
-                                                <p className="text-sm text-muted-foreground">
-                                                    {guest.phone}
-                                                </p>
-                                            )}
-                                        </div>
-                                        <div className="flex flex-wrap gap-2">
-                                            {guest.invite_link && (
-                                                <Button asChild variant="outline" size="sm">
-                                                    <a
-                                                        href={guest.invite_link}
-                                                        target="_blank"
-                                                        rel="noreferrer"
-                                                    >
-                                                        Abrir convite
-                                                    </a>
-                                                </Button>
-                                            )}
-                                            <Button
-                                                type="button"
-                                                variant="destructive"
-                                                size="sm"
-                                                onClick={() => handleGuestDelete(guest.id)}
-                                            >
-                                                Remover
-                                            </Button>
-                                        </div>
-                                    </div>
-                                ))}
+                            <div className="mt-4 rounded-xl border">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Nome</TableHead>
+                                            <TableHead>Email</TableHead>
+                                            <TableHead>Telefone</TableHead>
+                                            <TableHead className="text-right">Acoes</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {guests.map((guest) => (
+                                            <TableRow key={guest.id}>
+                                                <TableCell className="font-medium">{guest.name}</TableCell>
+                                                <TableCell>{guest.email}</TableCell>
+                                                <TableCell>{guest.phone || '-'}</TableCell>
+                                                <TableCell>
+                                                    <div className="flex justify-end gap-2">
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            size="icon-sm"
+                                                            title="Visualizar convite"
+                                                            disabled={!guest.invite_link}
+                                                            onClick={() => {
+                                                                if (guest.invite_link) {
+                                                                    window.open(
+                                                                        guest.invite_link,
+                                                                        '_blank',
+                                                                        'noopener,noreferrer'
+                                                                    );
+                                                                }
+                                                            }}
+                                                        >
+                                                            <Eye className="h-4 w-4" />
+                                                        </Button>
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            size="icon-sm"
+                                                            onClick={() => handleSendInviteWhatsapp(guest)}
+                                                            disabled={!guest.invite_link}
+                                                            title="Enviar convite por WhatsApp"
+                                                            aria-label="Enviar convite por WhatsApp"
+                                                        >
+                                                            <MessageCircle className="h-4 w-4" />
+                                                        </Button>
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            size="icon-sm"
+                                                            onClick={() => handleSendInviteEmail(guest)}
+                                                            disabled={!guest.invite_link}
+                                                            title="Enviar convite por email"
+                                                            aria-label="Enviar convite por email"
+                                                        >
+                                                            <Mail className="h-4 w-4" />
+                                                        </Button>
+                                                        <Button
+                                                            type="button"
+                                                            variant="destructive"
+                                                            size="icon-sm"
+                                                            onClick={() => handleGuestDelete(guest.id)}
+                                                            title="Remover convidado"
+                                                            aria-label="Remover convidado"
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
                             </div>
                         )}
                     </section>
@@ -660,7 +868,12 @@ export default function EditInvitation({ invitation, guests, gifts }: EditInvita
             )}
 
             {activeTab === 'presentes' && (
-                <div className="flex flex-col gap-8 p-6">
+                <div
+                    className="flex flex-col gap-8 p-6"
+                    role="tabpanel"
+                    id="panel-presentes"
+                    aria-labelledby="tab-presentes"
+                >
                     <section className="rounded-2xl border bg-background p-6 shadow-sm">
                         <h2 className="text-lg font-semibold">Cadastrar presente</h2>
                         <form

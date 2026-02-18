@@ -1,197 +1,46 @@
 import { Head, Link } from "@inertiajs/react";
 
-import { Button } from "@/components/ui/button";
+import { InvitationLayout, type InvitationLayoutData } from "@/components/invitation-layout";
 import { dashboard } from "@/routes";
 
-type Invitation = {
-  id: number;
-  type: string;
-  title: string;
-  subtitle: string | null;
-  event_date: string | null;
-  event_time: string | null;
-  location: string | null;
-  message: string | null;
-  details: string | null;
-  note: string | null;
-  cover_image: string | null;
-  gallery_images: string[] | null;
-  theme_color: string | null;
-  font_color: string | null;
-};
-
-export default function InvitationPreview({ invitation }: { invitation: Invitation }) {
-  const coverUrl = invitation.cover_image
-    ? `/storage/${invitation.cover_image}`
-    : null;
-  const gallery = invitation.gallery_images ?? [];
-  const isValidHex = (value: string | null | undefined) =>
-    typeof value === "string" && /^#[0-9a-fA-F]{6}$/.test(value);
-  const baseColor = isValidHex(invitation.theme_color) ? invitation.theme_color! : "#7a159e";
-  const fontColor = isValidHex(invitation.font_color) ? invitation.font_color! : "#ffffff";
-
-  const clamp = (value: number) => Math.min(255, Math.max(0, value));
-  const adjustColor = (hex: string, amount: number) => {
-    const sanitized = hex.replace("#", "");
-    if (sanitized.length !== 6) {
-      return hex;
-    }
-    const num = parseInt(sanitized, 16);
-    const r = clamp((num >> 16) + amount);
-    const g = clamp(((num >> 8) & 0xff) + amount);
-    const b = clamp((num & 0xff) + amount);
-    return `rgb(${r}, ${g}, ${b})`;
-  };
-  const glowOne = adjustColor(baseColor, 70);
-  const glowTwo = adjustColor(baseColor, 40);
-  const glowThree = adjustColor(baseColor, 90);
-
+export default function InvitationPreview({ invitation }: { invitation: InvitationLayoutData }) {
   return (
     <>
       <Head title="Preview do convite" />
-      <section
-        className="relative min-h-[100dvh] overflow-hidden"
-        style={{ backgroundColor: baseColor, color: fontColor }}
-      >
-        <div className="absolute inset-0">
-          <div
-            className="absolute -top-24 right-[-4rem] h-72 w-72 rounded-full opacity-70 blur-2xl"
-            style={{ backgroundColor: glowOne }}
-          />
-          <div
-            className="absolute top-40 left-[-6rem] h-64 w-64 rounded-full opacity-50 blur-3xl"
-            style={{ backgroundColor: glowTwo }}
-          />
-          <div
-            className="absolute -bottom-32 left-1/3 h-80 w-80 rounded-full opacity-60 blur-3xl"
-            style={{ backgroundColor: glowThree }}
-          />
-        </div>
-
-        <div className="relative mx-auto flex min-h-[100dvh] w-full max-w-2xl flex-col px-6 pb-14 pt-10">
-          <header className="flex items-center justify-between">
-            <Link
-              href={dashboard()}
-              className="flex h-11 w-11 items-center justify-center rounded-full bg-white/10 ring-1 ring-white/20"
+      <InvitationLayout
+        invitation={invitation}
+        badgeLabel="Preview"
+        leftHeader={
+          <Link
+            href={dashboard()}
+            className="flex h-11 w-11 items-center justify-center rounded-full bg-white/10 ring-1 ring-white/20"
+          >
+            <span className="text-xl">&larr;</span>
+          </Link>
+        }
+        rightHeader={
+          <Link
+            href={`/convites/${invitation.id}/editar`}
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-white/15 ring-1 ring-white/20 transition hover:bg-white/25"
+            aria-label="Editar convite"
+            title="Editar convite"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.7"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-5 w-5"
+              aria-hidden="true"
             >
-              <span className="text-xl">&larr;</span>
-            </Link>
-            <div className="flex items-center gap-2">
-              <span className="rounded-full bg-white/15 px-4 py-2 text-xs font-medium uppercase tracking-[0.2em]">
-                Preview
-              </span>
-              <Link
-                href={`/convites/${invitation.id}/editar`}
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-white/15 ring-1 ring-white/20 transition hover:bg-white/25"
-                aria-label="Editar convite"
-                title="Editar convite"
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.7"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="h-5 w-5"
-                  aria-hidden="true"
-                >
-                  <path d="M12 20h9" />
-                  <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
-                </svg>
-              </Link>
-            </div>
-          </header>
-
-          <div className="mt-12 flex flex-1 flex-col items-center text-center">
-            <div className="mb-8 w-full rounded-[36px] bg-white/10 p-5 shadow-xl ring-1 ring-white/15">
-              <div className="rounded-[28px] bg-white/5 p-4">
-                <div className="aspect-[4/3] w-full overflow-hidden rounded-[24px] border border-white/20 bg-white/10">
-                  {coverUrl ? (
-                    <img src={coverUrl} alt="Capa do convite" className="h-full w-full object-cover" />
-                  ) : (
-                    <div className="flex h-full items-center justify-center text-sm opacity-70">
-                      Imagem do convite
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <h1 className="text-3xl font-semibold md:text-4xl">{invitation.title}</h1>
-            {invitation.subtitle && (
-              <p className="mt-2 text-sm opacity-80">{invitation.subtitle}</p>
-            )}
-            <p className="mt-3 text-sm opacity-70 md:text-base">
-              {invitation.event_date
-                ? new Date(invitation.event_date).toLocaleDateString()
-                : "Sem data"}
-              {invitation.event_time ? ` • ${invitation.event_time}` : ""}
-            </p>
-
-            {invitation.location && (
-              <p className="mt-2 text-sm opacity-70">{invitation.location}</p>
-            )}
-
-            {invitation.message && (
-              <p className="mt-6 max-w-md text-sm opacity-70">
-                {invitation.message}
-              </p>
-            )}
-
-            {gallery.length > 0 && (
-              <div className="mt-8 grid w-full grid-cols-2 gap-3">
-                {gallery.map((image) => (
-                  <div
-                    key={image}
-                    className="aspect-[4/3] overflow-hidden rounded-2xl border border-white/20 bg-white/10"
-                  >
-                    <img
-                      src={`/storage/${image}`}
-                      alt="Imagem do convite"
-                      className="h-full w-full object-cover"
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div className="mt-10 flex w-full flex-col gap-3">
-              {invitation.details && (
-                <div className="rounded-2xl bg-white/10 p-4 text-sm opacity-80">
-                  {invitation.details}
-                </div>
-              )}
-              {invitation.note && (
-                <div className="rounded-2xl bg-white/10 p-4 text-sm opacity-80">
-                  {invitation.note}
-                </div>
-              )}
-            </div>
-
-            <div className="mt-8 w-full rounded-full bg-white/10 p-2 shadow-lg ring-1 ring-white/10">
-              <div className="flex items-center justify-between text-sm font-medium">
-                <Button
-                  type="button"
-                  className="flex-1 rounded-full bg-white text-inherit hover:bg-white/90"
-                  style={{ color: fontColor }}
-                >
-                  Aceitar convite
-                </Button>
-                <span className="mx-3 h-8 w-px bg-white/20" />
-                <button className="flex-1 rounded-full px-4 py-2 opacity-80">
-                  Talvez
-                </button>
-                <span className="mx-3 h-8 w-px bg-white/20" />
-                <button className="flex-1 rounded-full px-4 py-2 opacity-80">
-                  Nao vou
-                </button>
-              </div>
-            </div>
-
-          </div>
-        </div>
-      </section>
+              <path d="M12 20h9" />
+              <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+            </svg>
+          </Link>
+        }
+      />
     </>
   );
 }
